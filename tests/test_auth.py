@@ -189,12 +189,10 @@ def test_users_cannot_reach_each_others_data(client):
     ):
         assert intruder.delete(path).status_code == 404, path
 
-    # The intruder cannot attach the owner's file to their own plan either.
     own = intruder.post("/projects", json={"name": "Mine"}).json()["id"]
     attach = intruder.post(f"/projects/{own}/plans", json={"title": "P", "file_id": file})
     assert attach.status_code == 404
 
-    # Nothing changed for the owner.
     assert client.get(base).json()["name"] == "Demo House"
     assert len(client.get(f"{base}/terrains").json()) == 1
     assert client.get(f"/files/{file}/content").content == PNG

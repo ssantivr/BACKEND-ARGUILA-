@@ -8,8 +8,6 @@ from tests.helpers import register
 
 
 class FakeAssistant:
-    """Stands in for the real client: records calls and returns a fixed reply."""
-
     def __init__(self):
         self.calls = []
         self.error = None

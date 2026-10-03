@@ -1,10 +1,3 @@
-"""Rule-based project checks.
-
-Each rule inspects the project data and yields (category, content) pairs. The
-content is user-facing, so it is written in Spanish like the rest of the UI.
-These are generic rules of thumb to prompt a review, not engineering advice.
-"""
-
 from collections.abc import Iterator, Sequence
 
 from app.models import Material, Terrain

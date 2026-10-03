@@ -10,8 +10,6 @@ from app.data_structures import (
     linear_search,
 )
 
-# --- Stack -----------------------------------------------------------------
-
 
 def test_stack_is_lifo():
     stack: Stack[int] = Stack()
@@ -53,9 +51,6 @@ def test_stack_accepts_falsy_values_and_clear():
     stack.push(5)
     stack.clear()
     assert stack.is_empty()
-
-
-# --- Queue -----------------------------------------------------------------
 
 
 def test_queue_is_fifo():
@@ -119,9 +114,6 @@ def test_capacity_must_be_positive(structure):
         structure(capacity=0)
 
 
-# --- Linked lists ----------------------------------------------------------
-
-
 @pytest.mark.parametrize("list_type", [SinglyLinkedList, DoublyLinkedList])
 def test_linked_list_insertions(list_type):
     items = list_type()
@@ -158,7 +150,6 @@ def test_linked_list_remove_head_middle_tail(list_type):
     assert not items.remove(42)
     assert list(items) == [2]
 
-    # The tail pointer must still be valid after removing the old tail.
     items.push_back(5)
     assert list(items) == [2, 5]
 
@@ -204,7 +195,6 @@ def test_singly_linked_list_reverse():
     items.reverse()
     assert list(items) == [3, 2, 1]
 
-    # After reversing, the tail is the old head.
     items.push_back(0)
     assert list(items) == [3, 2, 1, 0]
 
@@ -233,9 +223,6 @@ def test_doubly_linked_list_backward_links_stay_consistent():
     assert items.pop_back() == 15
     assert items.is_empty()
     assert list(reversed(items)) == []
-
-
-# --- Arrays ----------------------------------------------------------------
 
 
 def test_linear_search():

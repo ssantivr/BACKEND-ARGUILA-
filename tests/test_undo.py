@@ -92,7 +92,6 @@ def test_undo_conflict_keeps_the_entry_in_history(client, project_id):
     assert undo(client, project_id).status_code == 409
     assert history(client, project_id) == [{"kind": "material", "label": "Concrete"}]
 
-    # Once the conflicting material is renamed, the same undo succeeds.
     client.patch(f"/materials/{replacement['id']}", json={"name": "Concrete B"})
 
     assert undo(client, project_id).status_code == 200
@@ -116,7 +115,7 @@ def test_history_is_separate_per_project_and_dropped_with_the_project(client, pr
 
 
 def record(project_id: int, label: str) -> DeletedRecord:
-    return DeletedRecord(project_id, "material", label, object, {})  # type: ignore[arg-type]
+    return DeletedRecord(project_id, "material", label, object, {})
 
 
 def test_history_drops_the_oldest_entry_when_full():

@@ -14,8 +14,6 @@ class _Node(Generic[T]):
 
 
 class DoublyLinkedList(Generic[T]):
-    """Doubly linked list with head and tail pointers. O(n) space."""
-
     def __init__(self) -> None:
         self._head: _Node[T] | None = None
         self._tail: _Node[T] | None = None
@@ -39,14 +37,12 @@ class DoublyLinkedList(Generic[T]):
             current = current.previous
 
     def __contains__(self, value: object) -> bool:
-        """O(n)."""
         return any(item == value for item in self)
 
     def is_empty(self) -> bool:
         return self._head is None
 
     def push_front(self, value: T) -> None:
-        """O(1)."""
         node = _Node(value)
 
         if self._head is None:
@@ -59,7 +55,6 @@ class DoublyLinkedList(Generic[T]):
         self._size += 1
 
     def push_back(self, value: T) -> None:
-        """O(1)."""
         node = _Node(value)
 
         if self._tail is None:
@@ -72,7 +67,6 @@ class DoublyLinkedList(Generic[T]):
         self._size += 1
 
     def insert_at(self, index: int, value: T) -> None:
-        """O(n). Valid positions: 0..len(self). Raises IndexError otherwise."""
         if index < 0 or index > self._size:
             raise IndexError("insert position out of range")
 
@@ -99,21 +93,18 @@ class DoublyLinkedList(Generic[T]):
         self._size += 1
 
     def pop_front(self) -> T:
-        """O(1). Raises IndexError when the list is empty."""
         if self._head is None:
             raise IndexError("pop from empty list")
 
         return self._unlink(self._head)
 
     def pop_back(self) -> T:
-        """O(1). Raises IndexError when the list is empty."""
         if self._tail is None:
             raise IndexError("pop from empty list")
 
         return self._unlink(self._tail)
 
     def remove(self, value: T) -> bool:
-        """O(n). Removes the first occurrence; returns whether it was found."""
         current = self._head
 
         while current is not None:
@@ -126,7 +117,6 @@ class DoublyLinkedList(Generic[T]):
         return False
 
     def clear(self) -> None:
-        """O(n): links are broken explicitly so the nodes do not form cycles."""
         current = self._head
 
         while current is not None:
@@ -139,7 +129,6 @@ class DoublyLinkedList(Generic[T]):
         self._size = 0
 
     def _unlink(self, node: _Node[T]) -> T:
-        """O(1). Detaches node from the list and returns its data."""
         if node.previous is not None:
             node.previous.next = node.next
         else:

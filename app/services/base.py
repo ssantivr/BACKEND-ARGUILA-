@@ -6,13 +6,6 @@ from app.repositories.project_repository import ProjectRepository
 
 
 class ProjectScopedService:
-    """Base for services whose data hangs from a project.
-
-    Every access is limited to projects owned by the authenticated user. A
-    project owned by someone else is reported as not found, so the API does
-    not reveal which ids exist.
-    """
-
     def __init__(self, session: Session, user: User) -> None:
         self.session = session
         self.user = user

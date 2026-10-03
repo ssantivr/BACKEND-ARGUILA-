@@ -64,7 +64,6 @@ def send_message(
     service: ConversationService = Depends(get_service),
     assistant: AssistantClient = Depends(get_assistant),
 ):
-    """Returns the stored question followed by the assistant's answer."""
     return service.send_message(conversation_id, data.content, assistant)
 
 

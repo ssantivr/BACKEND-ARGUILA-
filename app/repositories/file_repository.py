@@ -26,8 +26,6 @@ class FileRepository:
         return file
 
     def delete(self, file: File) -> None:
-        # Detach explicitly instead of relying on ON DELETE SET NULL, which
-        # SQLite only honours when foreign keys are switched on.
         for model in (Plan, Elevation):
             self.session.execute(
                 update(model).where(model.file_id == file.id).values(file_id=None)

@@ -12,5 +12,4 @@ def get_current_user(
     token: str | None = Cookie(default=None, alias=SESSION_COOKIE),
     session: Session = Depends(get_session),
 ) -> User:
-    """Resolves the session cookie to a user, or fails with 401."""
     return AuthService(session).user_for_token(token)

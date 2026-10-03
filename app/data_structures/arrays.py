@@ -5,7 +5,6 @@ T = TypeVar("T")
 
 
 def linear_search(values: Sequence[T], target: T) -> int:
-    """O(n). Returns the index of target or -1 if it is not present."""
     for index, value in enumerate(values):
         if value == target:
             return index
@@ -14,7 +13,6 @@ def linear_search(values: Sequence[T], target: T) -> int:
 
 
 def binary_search(values: Sequence[Any], target: Any) -> int:
-    """O(log n). Requires values sorted in ascending order. Returns -1 if absent."""
     low = 0
     high = len(values) - 1
 
@@ -33,8 +31,6 @@ def binary_search(values: Sequence[Any], target: Any) -> int:
 
 
 class DynamicArray(Generic[T]):
-    """Array that doubles its capacity when full. Amortized O(1) append."""
-
     def __init__(self, capacity: int = 4) -> None:
         if capacity <= 0:
             raise ValueError("capacity must be positive")
@@ -47,15 +43,13 @@ class DynamicArray(Generic[T]):
 
     def __iter__(self) -> Iterator[T]:
         for index in range(self._size):
-            yield self._items[index]  # type: ignore[misc]
+            yield self._items[index]
 
     def __getitem__(self, index: int) -> T:
-        """O(1)."""
         self._check_index(index)
-        return self._items[index]  # type: ignore[return-value]
+        return self._items[index]
 
     def __setitem__(self, index: int, value: T) -> None:
-        """O(1)."""
         self._check_index(index)
         self._items[index] = value
 
@@ -64,11 +58,9 @@ class DynamicArray(Generic[T]):
         return len(self._items)
 
     def append(self, value: T) -> None:
-        """Amortized O(1)."""
         self.insert_at(self._size, value)
 
     def insert_at(self, index: int, value: T) -> None:
-        """O(n). Shifts elements right. Valid positions: 0..len(self)."""
         if index < 0 or index > self._size:
             raise IndexError("insert position out of range")
 
@@ -82,7 +74,6 @@ class DynamicArray(Generic[T]):
         self._size += 1
 
     def remove_at(self, index: int) -> T:
-        """O(n). Shifts elements left and returns the removed value."""
         self._check_index(index)
         removed = self._items[index]
 
@@ -91,10 +82,9 @@ class DynamicArray(Generic[T]):
 
         self._size -= 1
         self._items[self._size] = None
-        return removed  # type: ignore[return-value]
+        return removed
 
     def _resize(self, capacity: int) -> None:
-        """O(n). Allocates a larger block and copies the elements."""
         resized: list[T | None] = [None] * capacity
 
         for index in range(self._size):

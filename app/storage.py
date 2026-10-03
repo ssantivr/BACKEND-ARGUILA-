@@ -1,10 +1,3 @@
-"""Disk storage for uploaded files.
-
-Files are stored under UPLOAD_DIR with a random name, so nothing supplied by
-the client (file name, declared content type) decides where or how they are
-written. The type is detected from the first bytes of the content.
-"""
-
 import os
 from pathlib import Path
 from typing import BinaryIO
@@ -21,7 +14,6 @@ def upload_dir() -> Path:
 
 
 def detect_type(head: bytes) -> tuple[str, str] | None:
-    """Returns (mime_type, extension) for the supported formats, else None."""
     if head.startswith(b"%PDF-"):
         return "application/pdf", ".pdf"
 
@@ -38,7 +30,6 @@ def detect_type(head: bytes) -> tuple[str, str] | None:
 
 
 def store(stream: BinaryIO) -> tuple[str, str, int]:
-    """Writes the stream to disk. Returns (stored_name, mime_type, size_bytes)."""
     head = stream.read(16)
     detected = detect_type(head)
 
@@ -74,7 +65,6 @@ def store(stream: BinaryIO) -> tuple[str, str, int]:
 
 
 def path_for(stored_name: str) -> Path:
-    # stored_name comes from the database; Path.name guards against a tampered row.
     return upload_dir() / Path(stored_name).name
 
 

@@ -36,7 +36,6 @@ class RecommendationRepository:
     def replace_by_source(
         self, project_id: int, source: str, recommendations: list[Recommendation]
     ) -> list[Recommendation]:
-        """Swaps all of a project's recommendations from one source atomically."""
         self.session.execute(
             delete(Recommendation).where(
                 Recommendation.project_id == project_id,

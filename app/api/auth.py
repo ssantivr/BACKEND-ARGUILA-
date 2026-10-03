@@ -17,8 +17,6 @@ def get_service(session: Session = Depends(get_session)) -> AuthService:
 
 
 def set_session_cookie(response: Response, token: str) -> None:
-    # HttpOnly keeps the token away from page scripts; SameSite=Lax stops other
-    # sites from sending it on their own POST/PATCH/DELETE requests.
     response.set_cookie(
         SESSION_COOKIE,
         token,

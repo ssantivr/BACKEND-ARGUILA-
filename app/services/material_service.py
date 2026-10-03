@@ -38,7 +38,6 @@ class MaterialService(ProjectScopedService):
         material = self.get(material_id)
         changes = data.model_dump(exclude_unset=True)
 
-        # these columns are NOT NULL: an explicit null means "leave unchanged"
         for required in ("name", "unit", "quantity", "unit_cost"):
             if changes.get(required, "") is None:
                 del changes[required]

@@ -30,7 +30,6 @@ class ProjectService:
         )
 
     def get(self, project_id: int) -> Project:
-        # Someone else's project is reported as not found.
         project = self.projects.get_owned(project_id, self.user.id)
 
         if project is None:
@@ -42,7 +41,6 @@ class ProjectService:
         project = self.get(project_id)
         changes = data.model_dump(exclude_unset=True)
 
-        # name and status are NOT NULL: an explicit null means "leave unchanged"
         for required in ("name", "status"):
             if changes.get(required, "") is None:
                 del changes[required]

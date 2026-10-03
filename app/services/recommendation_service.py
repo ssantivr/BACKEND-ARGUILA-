@@ -1,4 +1,4 @@
-from __future__ import annotations  # the `list` method shadows the builtin below
+from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
@@ -39,10 +39,6 @@ class RecommendationService(ProjectScopedService):
         )
 
     def generate(self, project_id: int) -> list[Recommendation]:
-        """Re-evaluates the rules and replaces the previous system recommendations.
-
-        Recommendations written by users are never touched.
-        """
         self._ensure_project_exists(project_id)
 
         suggestions = recommendation_rules.evaluate(

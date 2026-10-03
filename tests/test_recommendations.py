@@ -127,7 +127,6 @@ def test_generate_replaces_system_recommendations_but_keeps_user_ones(client, pr
     assert len(listed()) == len(first) + 1
     assert len(listed(category="terrain")) == 1
 
-    # Fixing the data and regenerating clears the outdated system recommendations.
     add_terrain(client, project_id, slope_percent=3, soil_type="sand")
     add_material(client, project_id)
 

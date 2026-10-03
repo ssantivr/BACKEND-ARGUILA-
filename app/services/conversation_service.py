@@ -1,4 +1,4 @@
-from __future__ import annotations  # the `list` method shadows the builtin below
+from __future__ import annotations
 
 import json
 
@@ -74,11 +74,6 @@ class ConversationService(ProjectScopedService):
     def send_message(
         self, conversation_id: int, content: str, assistant: AssistantClient
     ) -> list[AIMessage]:
-        """Asks the assistant and stores the question with its answer.
-
-        Nothing is stored when the assistant fails, so the history never ends
-        with an unanswered question.
-        """
         conversation = self.get(conversation_id)
         project = self.projects.get(conversation.project_id)
         assert project is not None
@@ -147,5 +142,4 @@ class ConversationService(ProjectScopedService):
             ],
         }
 
-        # Decimal values become plain numbers.
         return json.dumps(data, ensure_ascii=False, indent=2, default=float)

@@ -35,7 +35,6 @@ class TerrainService(ProjectScopedService):
         terrain = self.get(terrain_id)
         changes = data.model_dump(exclude_unset=True)
 
-        # name and area_m2 are NOT NULL: an explicit null means "leave unchanged"
         for required in ("name", "area_m2"):
             if changes.get(required, "") is None:
                 del changes[required]

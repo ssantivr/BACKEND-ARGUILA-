@@ -13,7 +13,6 @@ SESSION_LIFETIME = timedelta(days=7)
 
 
 def _now() -> datetime:
-    # Stored as naive UTC, matching the TIMESTAMP columns.
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 

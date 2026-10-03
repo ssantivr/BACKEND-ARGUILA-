@@ -38,11 +38,9 @@ class PlanService(ProjectScopedService):
         plan = self.get(plan_id)
         changes = data.model_dump(exclude_unset=True)
 
-        # title is NOT NULL: an explicit null means "leave unchanged"
         if changes.get("title", "") is None:
             del changes["title"]
 
-        # file_id is nullable: an explicit null detaches the file
         self._ensure_file_in_project(changes.get("file_id"), plan.project_id)
 
         for field, value in changes.items():

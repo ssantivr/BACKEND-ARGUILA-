@@ -1,4 +1,4 @@
-from __future__ import annotations  # the `list` method shadows the builtin below
+from __future__ import annotations
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -25,7 +25,6 @@ class UndoService(ProjectScopedService):
 
         values = dict(deleted.values)
 
-        # The attached file may have been deleted after the record was.
         if values.get("file_id") is not None and (
             self.session.get(File, values["file_id"]) is None
         ):
@@ -35,7 +34,6 @@ class UndoService(ProjectScopedService):
             self.session.add(deleted.model(**values))
             self.session.commit()
         except IntegrityError:
-            # e.g. a material with the same name was created after the deletion.
             self.session.rollback()
             undo_history.record(deleted)
             raise ConflictError(

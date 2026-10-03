@@ -1,4 +1,4 @@
-from __future__ import annotations  # the `list` method shadows the builtin below
+from __future__ import annotations
 
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import BinaryIO
@@ -13,7 +13,6 @@ from app.services.base import ProjectScopedService
 
 
 def clean_filename(filename: str | None) -> str:
-    """Keeps only the base name: browsers may send a full client-side path."""
     name = PureWindowsPath(PurePosixPath(filename or "").name).name.strip()
     return name[:255] or "file"
 

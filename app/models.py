@@ -1,5 +1,3 @@
-"""SQLAlchemy models. Keep in sync with database/schema.sql."""
-
 from datetime import datetime
 from decimal import Decimal
 
@@ -24,7 +22,6 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(255), unique=True)
-    # Null for accounts created before authentication existed: they cannot log in.
     password_hash: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 

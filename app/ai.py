@@ -1,9 +1,3 @@
-"""Client for the AI assistant (Claude, through the official Anthropic SDK).
-
-Credentials come from the environment (ANTHROPIC_API_KEY); nothing is stored
-in the repository. Without them the assistant endpoints answer 503.
-"""
-
 import os
 from functools import lru_cache
 
@@ -26,18 +20,13 @@ class AssistantClient:
         )
 
     def reply(self, system: str, messages: list[dict[str, str]]) -> str:
-        """Sends the conversation and returns the assistant's text."""
         try:
             response = self._client.beta.messages.create(
                 model=MODEL,
                 max_tokens=MAX_OUTPUT_TOKENS,
                 system=system,
                 messages=messages,
-                # Thinking is adaptive by default on this model; effort is the
-                # control for depth and cost.
                 output_config={"effort": "medium"},
-                # If a safety classifier declines the request, the API retries
-                # it on a fallback model chosen by refusal category.
                 betas=["server-side-fallback-2026-07-01"],
                 fallbacks="default",
             )
@@ -68,7 +57,6 @@ def _client() -> AssistantClient:
 
 
 def get_assistant() -> AssistantClient:
-    """FastAPI dependency. Tests override it with a fake."""
     if not (
         os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
     ):

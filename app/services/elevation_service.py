@@ -41,12 +41,10 @@ class ElevationService(ProjectScopedService):
 
         changes = data.model_dump(exclude_unset=True)
 
-        # title and orientation are NOT NULL: an explicit null means "leave unchanged"
         for required in ("title", "orientation"):
             if changes.get(required, "") is None:
                 del changes[required]
 
-        # file_id is nullable: an explicit null detaches the file
         self._ensure_file_in_project(changes.get("file_id"), elevation.project_id)
 
         for field, value in changes.items():
