@@ -264,3 +264,23 @@ def test_old_failures_stop_counting(monkeypatch):
 
     clock[0] = 30
     assert not limiter.is_blocked("ana")
+
+
+def test_limiter_stops_tracking_new_keys_when_full(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(login_limiter, "now", lambda: clock[0])
+    limiter = login_limiter.LoginLimiter(max_attempts=1, window_seconds=10, max_keys=2)
+
+    limiter.record_failure("a")
+    limiter.record_failure("b")
+    limiter.record_failure("c")
+
+    assert limiter.is_blocked("a")
+    assert limiter.is_blocked("b")
+    assert not limiter.is_blocked("c")
+
+    clock[0] = 11
+    limiter.record_failure("c")
+
+    assert limiter.is_blocked("c")
+    assert not limiter.is_blocked("a")
