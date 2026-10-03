@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import SESSION_COOKIE
 from app.main import app
-from app.services import auth_service
+from app.services import auth_service, login_limiter
 from tests.helpers import PASSWORD, register
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"fake image data"
@@ -206,3 +206,61 @@ def test_two_users_can_use_the_same_project_name(client):
     register(other, name="Eve", email="eve@example.com")
 
     assert other.post("/projects", json={"name": "Demo House"}).status_code == 201
+
+
+def test_login_is_blocked_after_repeated_failures(client, monkeypatch):
+    clock = [1000.0]
+    monkeypatch.setattr(login_limiter, "now", lambda: clock[0])
+    register(client)
+    register(client, name="Eve", email="eve@example.com")
+    client.post("/auth/logout")
+
+    for _ in range(login_limiter.MAX_FAILED_ATTEMPTS):
+        assert login(client, password="wrong-password").status_code == 401
+
+    blocked = login(client)
+    assert blocked.status_code == 429
+    assert client.get("/auth/me").status_code == 401
+
+    assert login(client, email="eve@example.com").status_code == 200
+    client.post("/auth/logout")
+
+    clock[0] += login_limiter.WINDOW_SECONDS + 1
+    assert login(client).status_code == 200
+
+
+def test_successful_login_resets_the_failure_count(client, monkeypatch):
+    monkeypatch.setattr(login_limiter, "now", lambda: 1000.0)
+    register(client)
+    client.post("/auth/logout")
+
+    for _ in range(login_limiter.MAX_FAILED_ATTEMPTS - 1):
+        login(client, password="wrong-password")
+
+    assert login(client).status_code == 200
+
+    for _ in range(login_limiter.MAX_FAILED_ATTEMPTS - 1):
+        assert login(client, password="wrong-password").status_code == 401
+
+    assert login(client).status_code == 200
+
+
+def test_old_failures_stop_counting(monkeypatch):
+    clock = [0.0]
+    monkeypatch.setattr(login_limiter, "now", lambda: clock[0])
+    limiter = login_limiter.LoginLimiter(max_attempts=2, window_seconds=10)
+
+    limiter.record_failure("ana")
+    clock[0] = 8
+    limiter.record_failure("ana")
+    assert limiter.is_blocked("ana")
+    assert not limiter.is_blocked("eve")
+
+    clock[0] = 11
+    assert not limiter.is_blocked("ana")
+
+    limiter.record_failure("ana")
+    assert limiter.is_blocked("ana")
+
+    clock[0] = 30
+    assert not limiter.is_blocked("ana")

@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 from app import models
 from app.database import Base, get_session
 from app.main import app
+from app.services.login_limiter import login_limiter
 from app.services.undo_history import undo_history
 
 SCHEMA_FILE = Path(__file__).resolve().parents[2] / "database" / "schema.sql"
@@ -59,4 +60,5 @@ def client(tmp_path, monkeypatch):
 
     app.dependency_overrides.clear()
     undo_history.clear()
+    login_limiter.clear()
     engine.dispose()

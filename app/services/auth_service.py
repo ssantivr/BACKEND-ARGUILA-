@@ -3,11 +3,12 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app import security
-from app.errors import AuthenticationError, ConflictError
+from app.errors import AuthenticationError, ConflictError, TooManyAttemptsError
 from app.models import User, UserSession
 from app.repositories.session_repository import SessionRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas import LoginRequest, RegisterRequest
+from app.services.login_limiter import login_limiter
 
 SESSION_LIFETIME = timedelta(days=7)
 
@@ -42,11 +43,19 @@ class AuthService:
         return user, self._start_session(user)
 
     def login(self, data: LoginRequest) -> tuple[User, str]:
-        user = self.users.get_by_email(normalize_email(data.email))
+        email = normalize_email(data.email)
+
+        if login_limiter.is_blocked(email):
+            raise TooManyAttemptsError("Too many failed attempts, try again in a minute")
+
+        user = self.users.get_by_email(email)
         stored = user.password_hash if user else security.DUMMY_PASSWORD_HASH
 
         if not security.verify_password(data.password, stored) or user is None:
+            login_limiter.record_failure(email)
             raise AuthenticationError("Invalid email or password")
+
+        login_limiter.reset(email)
 
         return user, self._start_session(user)
 

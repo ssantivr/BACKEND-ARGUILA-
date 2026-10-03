@@ -19,6 +19,7 @@ from app.errors import (
     ConflictError,
     FileTooLargeError,
     NotFoundError,
+    TooManyAttemptsError,
     UnsupportedFileError,
 )
 
@@ -40,6 +41,13 @@ app.include_router(conversations.router)
 def handle_unauthenticated(request: Request, error: AuthenticationError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": str(error)}
+    )
+
+
+@app.exception_handler(TooManyAttemptsError)
+def handle_too_many_attempts(request: Request, error: TooManyAttemptsError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS, content={"detail": str(error)}
     )
 
 

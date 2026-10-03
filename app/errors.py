@@ -14,6 +14,10 @@ class AIUnavailableError(Exception):
     pass
 
 
+class TooManyAttemptsError(Exception):
+    pass
+
+
 class UnsupportedFileError(Exception):
     pass
 
