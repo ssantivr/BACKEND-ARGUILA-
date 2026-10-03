@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 ProjectStatus = Literal["draft", "active", "archived"]
 Orientation = Literal["north", "south", "east", "west"]
+RecommendationSource = Literal["ai", "user", "system"]
 
 
 class UserCreate(BaseModel):
@@ -152,4 +153,20 @@ class ElevationRead(BaseModel):
     file_id: int | None
     title: str
     orientation: Orientation
+    created_at: datetime
+
+
+class RecommendationCreate(BaseModel):
+    category: str = Field(min_length=1, max_length=80)
+    content: str = Field(min_length=1, max_length=2000)
+
+
+class RecommendationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    category: str
+    content: str
+    source: RecommendationSource
     created_at: datetime

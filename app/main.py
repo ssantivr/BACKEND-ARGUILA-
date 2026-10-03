@@ -1,7 +1,15 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
-from app.api import elevations, materials, plans, projects, terrains, users
+from app.api import (
+    elevations,
+    materials,
+    plans,
+    projects,
+    recommendations,
+    terrains,
+    users,
+)
 from app.errors import ConflictError, NotFoundError
 
 app = FastAPI(title="ARQUILA API", version="1.0.0")
@@ -12,6 +20,7 @@ app.include_router(terrains.router)
 app.include_router(materials.router)
 app.include_router(plans.router)
 app.include_router(elevations.router)
+app.include_router(recommendations.router)
 
 
 @app.exception_handler(NotFoundError)

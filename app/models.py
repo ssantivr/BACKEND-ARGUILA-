@@ -161,7 +161,7 @@ class Material(Base):
 
 class Recommendation(Base):
     __tablename__ = "recommendations"
-    __table_args__ = (CheckConstraint("source IN ('ai', 'user')"),)
+    __table_args__ = (CheckConstraint("source IN ('ai', 'user', 'system')"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(

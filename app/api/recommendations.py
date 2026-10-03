@@ -1,0 +1,56 @@
+from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy.orm import Session
+
+from app.database import get_session
+from app.schemas import RecommendationCreate, RecommendationRead, RecommendationSource
+from app.services.recommendation_service import RecommendationService
+
+router = APIRouter(tags=["recommendations"])
+
+
+def get_service(session: Session = Depends(get_session)) -> RecommendationService:
+    return RecommendationService(session)
+
+
+@router.post(
+    "/projects/{project_id}/recommendations",
+    response_model=RecommendationRead,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_recommendation(
+    project_id: int,
+    data: RecommendationCreate,
+    service: RecommendationService = Depends(get_service),
+):
+    return service.create(project_id, data)
+
+
+@router.get(
+    "/projects/{project_id}/recommendations",
+    response_model=list[RecommendationRead],
+)
+def list_recommendations(
+    project_id: int,
+    category: str | None = None,
+    source: RecommendationSource | None = None,
+    service: RecommendationService = Depends(get_service),
+):
+    return service.list(project_id, category=category, source=source)
+
+
+@router.post(
+    "/projects/{project_id}/recommendations/generate",
+    response_model=list[RecommendationRead],
+)
+def generate_recommendations(
+    project_id: int, service: RecommendationService = Depends(get_service)
+):
+    return service.generate(project_id)
+
+
+@router.delete("/recommendations/{recommendation_id}", status_code=204)
+def delete_recommendation(
+    recommendation_id: int, service: RecommendationService = Depends(get_service)
+):
+    service.delete(recommendation_id)
+    return Response(status_code=204)
