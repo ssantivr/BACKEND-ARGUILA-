@@ -5,6 +5,7 @@ from app.models import Material
 from app.repositories.material_repository import MaterialRepository
 from app.repositories.project_repository import ProjectRepository
 from app.schemas import MaterialCreate, MaterialUpdate
+from app.services.undo_history import snapshot, undo_history
 
 
 class MaterialService:
@@ -51,7 +52,10 @@ class MaterialService:
         return self.materials.save(material)
 
     def delete(self, material_id: int) -> None:
-        self.materials.delete(self.get(material_id))
+        material = self.get(material_id)
+        deleted = snapshot("material", material.name, material)
+        self.materials.delete(material)
+        undo_history.record(deleted)
 
     def _ensure_project_exists(self, project_id: int) -> None:
         if self.projects.get(project_id) is None:

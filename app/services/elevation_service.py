@@ -5,6 +5,7 @@ from app.models import Elevation
 from app.repositories.elevation_repository import ElevationRepository
 from app.repositories.project_repository import ProjectRepository
 from app.schemas import ElevationCreate, ElevationUpdate
+from app.services.undo_history import snapshot, undo_history
 
 
 class ElevationService:
@@ -44,7 +45,10 @@ class ElevationService:
         return self.elevations.save(elevation)
 
     def delete(self, elevation_id: int) -> None:
-        self.elevations.delete(self.get(elevation_id))
+        elevation = self.get(elevation_id)
+        deleted = snapshot("elevation", elevation.title, elevation)
+        self.elevations.delete(elevation)
+        undo_history.record(deleted)
 
     def _ensure_project_exists(self, project_id: int) -> None:
         if self.projects.get(project_id) is None:

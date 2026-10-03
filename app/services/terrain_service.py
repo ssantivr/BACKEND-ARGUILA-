@@ -5,6 +5,7 @@ from app.models import Terrain
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.terrain_repository import TerrainRepository
 from app.schemas import TerrainCreate, TerrainUpdate
+from app.services.undo_history import snapshot, undo_history
 
 
 class TerrainService:
@@ -45,7 +46,10 @@ class TerrainService:
         return self.terrains.save(terrain)
 
     def delete(self, terrain_id: int) -> None:
-        self.terrains.delete(self.get(terrain_id))
+        terrain = self.get(terrain_id)
+        deleted = snapshot("terrain", terrain.name, terrain)
+        self.terrains.delete(terrain)
+        undo_history.record(deleted)
 
     def _ensure_project_exists(self, project_id: int) -> None:
         if self.projects.get(project_id) is None:

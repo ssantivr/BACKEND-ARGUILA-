@@ -5,6 +5,7 @@ from app.models import Project
 from app.repositories.project_repository import ProjectRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas import ProjectCreate, ProjectUpdate
+from app.services.undo_history import undo_history
 
 
 class ProjectService:
@@ -55,6 +56,7 @@ class ProjectService:
 
     def delete(self, project_id: int) -> None:
         self.projects.delete(self.get(project_id))
+        undo_history.forget(project_id)
 
     def _ensure_name_is_free(self, owner_id: int, name: str) -> None:
         if self.projects.get_by_owner_and_name(owner_id, name) is not None:

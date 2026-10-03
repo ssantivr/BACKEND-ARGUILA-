@@ -5,6 +5,7 @@ from app.models import Plan
 from app.repositories.plan_repository import PlanRepository
 from app.repositories.project_repository import ProjectRepository
 from app.schemas import PlanCreate, PlanUpdate
+from app.services.undo_history import snapshot, undo_history
 
 
 class PlanService:
@@ -44,7 +45,10 @@ class PlanService:
         return self.plans.save(plan)
 
     def delete(self, plan_id: int) -> None:
-        self.plans.delete(self.get(plan_id))
+        plan = self.get(plan_id)
+        deleted = snapshot("plan", plan.title, plan)
+        self.plans.delete(plan)
+        undo_history.record(deleted)
 
     def _ensure_project_exists(self, project_id: int) -> None:
         if self.projects.get(project_id) is None:

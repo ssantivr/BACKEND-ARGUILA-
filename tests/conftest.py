@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 from app import models  # noqa: F401  (registers the tables on Base.metadata)
 from app.database import Base, get_session
 from app.main import app
+from app.services.undo_history import undo_history
 
 
 @pytest.fixture
@@ -27,4 +28,5 @@ def client():
     yield TestClient(app)
 
     app.dependency_overrides.clear()
+    undo_history.clear()
     engine.dispose()

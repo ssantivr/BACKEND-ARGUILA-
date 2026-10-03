@@ -156,6 +156,13 @@ class ElevationRead(BaseModel):
     created_at: datetime
 
 
+class DeletedItemRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    kind: Literal["terrain", "material", "plan", "elevation"]
+    label: str
+
+
 class RecommendationCreate(BaseModel):
     category: str = Field(min_length=1, max_length=80)
     content: str = Field(min_length=1, max_length=2000)

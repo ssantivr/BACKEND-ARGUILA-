@@ -8,6 +8,7 @@ from app.api import (
     projects,
     recommendations,
     terrains,
+    undo,
     users,
 )
 from app.errors import ConflictError, NotFoundError
@@ -21,6 +22,7 @@ app.include_router(materials.router)
 app.include_router(plans.router)
 app.include_router(elevations.router)
 app.include_router(recommendations.router)
+app.include_router(undo.router)
 
 
 @app.exception_handler(NotFoundError)
