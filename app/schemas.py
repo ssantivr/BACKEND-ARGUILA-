@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 ProjectStatus = Literal["draft", "active", "archived"]
+Orientation = Literal["north", "south", "east", "west"]
 
 
 class UserCreate(BaseModel):
@@ -106,4 +107,49 @@ class MaterialRead(BaseModel):
     unit: str
     quantity: float
     unit_cost: float
+    created_at: datetime
+
+
+class PlanCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    level: str | None = Field(default=None, max_length=60)
+    scale: str | None = Field(default=None, max_length=20)
+
+
+class PlanUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    level: str | None = Field(default=None, max_length=60)
+    scale: str | None = Field(default=None, max_length=20)
+
+
+class PlanRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    file_id: int | None
+    title: str
+    level: str | None
+    scale: str | None
+    created_at: datetime
+
+
+class ElevationCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    orientation: Orientation
+
+
+class ElevationUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    orientation: Orientation | None = None
+
+
+class ElevationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    file_id: int | None
+    title: str
+    orientation: Orientation
     created_at: datetime
