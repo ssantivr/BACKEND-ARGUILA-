@@ -114,6 +114,8 @@ class ConversationService(ProjectScopedService):
                 {
                     "name": terrain.name,
                     "area_m2": terrain.area_m2,
+                    "width_m": terrain.width_m,
+                    "length_m": terrain.length_m,
                     "slope_percent": terrain.slope_percent,
                     "soil_type": terrain.soil_type,
                     "latitude": terrain.latitude,

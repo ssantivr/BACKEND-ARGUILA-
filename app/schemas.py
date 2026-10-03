@@ -58,6 +58,8 @@ class ProjectRead(BaseModel):
 class TerrainCreate(BaseModel):
     name: str = Field(min_length=1, max_length=160)
     area_m2: float = Field(gt=0, lt=1e10)
+    width_m: float | None = Field(default=None, gt=0, lt=1e6)
+    length_m: float | None = Field(default=None, gt=0, lt=1e6)
     slope_percent: float | None = Field(default=None, ge=0, lt=1000)
     soil_type: str | None = Field(default=None, max_length=80)
     latitude: float | None = Field(default=None, ge=-90, le=90)
@@ -67,6 +69,8 @@ class TerrainCreate(BaseModel):
 class TerrainUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=160)
     area_m2: float | None = Field(default=None, gt=0, lt=1e10)
+    width_m: float | None = Field(default=None, gt=0, lt=1e6)
+    length_m: float | None = Field(default=None, gt=0, lt=1e6)
     slope_percent: float | None = Field(default=None, ge=0, lt=1000)
     soil_type: str | None = Field(default=None, max_length=80)
     latitude: float | None = Field(default=None, ge=-90, le=90)
@@ -80,6 +84,8 @@ class TerrainRead(BaseModel):
     project_id: int
     name: str
     area_m2: float
+    width_m: float | None
+    length_m: float | None
     slope_percent: float | None
     soil_type: str | None
     latitude: float | None

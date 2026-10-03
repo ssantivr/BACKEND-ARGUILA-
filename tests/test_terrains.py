@@ -75,3 +75,21 @@ def test_deleting_project_removes_its_terrains(client, project_id):
     client.delete(f"/projects/{project_id}")
 
     assert client.get(f"/terrains/{terrain_id}").status_code == 404
+
+
+def test_terrain_dimensions_are_optional_and_validated(client, project_id):
+    without = create_terrain(client, project_id).json()
+    assert without["width_m"] is None
+    assert without["length_m"] is None
+
+    response = create_terrain(client, project_id, name="Back Lot", width_m=15, length_m=30.5)
+    assert response.status_code == 201
+    assert response.json()["width_m"] == 15
+    assert response.json()["length_m"] == 30.5
+
+    updated = client.patch(f"/terrains/{without['id']}", json={"width_m": 12})
+    assert updated.json()["width_m"] == 12
+    assert updated.json()["length_m"] is None
+
+    assert create_terrain(client, project_id, name="x", width_m=0).status_code == 422
+    assert create_terrain(client, project_id, name="x", length_m=-3).status_code == 422

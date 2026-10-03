@@ -83,6 +83,8 @@ class Terrain(Base):
     __tablename__ = "terrains"
     __table_args__ = (
         CheckConstraint("area_m2 > 0"),
+        CheckConstraint("width_m > 0"),
+        CheckConstraint("length_m > 0"),
         CheckConstraint("slope_percent >= 0"),
         CheckConstraint("latitude BETWEEN -90 AND 90"),
         CheckConstraint("longitude BETWEEN -180 AND 180"),
@@ -94,6 +96,8 @@ class Terrain(Base):
     )
     name: Mapped[str] = mapped_column(String(160))
     area_m2: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    width_m: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
+    length_m: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
     slope_percent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     soil_type: Mapped[str | None] = mapped_column(String(80))
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
