@@ -197,3 +197,34 @@ class FileRead(BaseModel):
     mime_type: str
     size_bytes: int
     created_at: datetime
+
+
+class ConversationCreate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+
+
+class ConversationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    title: str | None
+    created_at: datetime
+
+
+class MessageCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class MessageRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    conversation_id: int
+    role: Literal["user", "assistant", "system"]
+    content: str
+    created_at: datetime
+
+
+class ConversationDetail(ConversationRead):
+    messages: list[MessageRead]

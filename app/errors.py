@@ -10,6 +10,10 @@ class AuthenticationError(Exception):
     pass
 
 
+class AIUnavailableError(Exception):
+    pass
+
+
 class UnsupportedFileError(Exception):
     pass
 

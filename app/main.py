@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.api import (
     auth,
+    conversations,
     elevations,
     files,
     materials,
@@ -13,6 +14,7 @@ from app.api import (
     undo,
 )
 from app.errors import (
+    AIUnavailableError,
     AuthenticationError,
     ConflictError,
     FileTooLargeError,
@@ -31,6 +33,7 @@ app.include_router(plans.router)
 app.include_router(elevations.router)
 app.include_router(recommendations.router)
 app.include_router(undo.router)
+app.include_router(conversations.router)
 
 
 @app.exception_handler(AuthenticationError)
@@ -65,6 +68,13 @@ def handle_unsupported_file(request: Request, error: UnsupportedFileError) -> JS
 @app.exception_handler(FileTooLargeError)
 def handle_file_too_large(request: Request, error: FileTooLargeError) -> JSONResponse:
     return JSONResponse(status_code=413, content={"detail": str(error)})
+
+
+@app.exception_handler(AIUnavailableError)
+def handle_ai_unavailable(request: Request, error: AIUnavailableError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(error)}
+    )
 
 
 @app.get("/health")
