@@ -140,3 +140,14 @@ def test_invalid_source_filter_is_rejected(client, project_id):
     )
 
     assert response.status_code == 422
+
+
+def test_incomplete_terrain_message_names_only_what_is_missing(client, project_id):
+    add_terrain(client, project_id, name="No soil", slope_percent=4)
+    add_terrain(client, project_id, name="No slope", soil_type="sand")
+    add_material(client, project_id)
+
+    text = contents(generate(client, project_id))
+
+    assert 'Completa el tipo de suelo del terreno "No soil"' in text
+    assert 'Completa la pendiente del terreno "No slope"' in text

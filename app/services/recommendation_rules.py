@@ -17,10 +17,18 @@ def terrain_suggestions(terrains: Sequence[Terrain]) -> Iterator[Suggestion]:
         return
 
     for terrain in terrains:
-        if terrain.slope_percent is None or not terrain.soil_type:
+        missing = []
+
+        if terrain.slope_percent is None:
+            missing.append("la pendiente")
+
+        if not terrain.soil_type:
+            missing.append("el tipo de suelo")
+
+        if missing:
             yield (
                 "terrain",
-                f"Completa la pendiente y el tipo de suelo del terreno "
+                f"Completa {' y '.join(missing)} del terreno "
                 f'"{terrain.name}" para poder evaluarlo.',
             )
 
