@@ -16,7 +16,7 @@ from app.repositories.password_reset_repository import PasswordResetRepository
 from app.repositories.session_repository import SessionRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas import LoginRequest, RegisterRequest
-from app.services.login_limiter import login_limiter
+from app.services.login_limiter import login_limiter, reset_request_limiter
 
 SESSION_LIFETIME = timedelta(days=7)
 RESET_TOKEN_LIFETIME = timedelta(minutes=30)
@@ -70,7 +70,13 @@ class AuthService:
         return user, self._start_session(user)
 
     def request_password_reset(self, email: str, mailer: Mailer) -> None:
-        user = self.users.get_by_email(normalize_email(email))
+        email = normalize_email(email)
+
+        if reset_request_limiter.is_blocked(email):
+            return
+
+        reset_request_limiter.record_failure(email)
+        user = self.users.get_by_email(email)
 
         if user is None:
             return

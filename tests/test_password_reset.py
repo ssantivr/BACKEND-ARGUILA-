@@ -5,7 +5,7 @@ import pytest
 
 from app.mailer import get_mailer
 from app.main import app
-from app.services import auth_service
+from app.services import auth_service, login_limiter
 from tests.helpers import PASSWORD, register
 
 NEW_PASSWORD = "a-brand-new-password"
@@ -108,3 +108,23 @@ def test_reset_token_is_not_stored_in_plain_text(client, mailer):
     request_reset(client)
 
     assert confirm(client, auth_service.security.hash_session_token(mailer.last_token())).status_code == 400
+
+
+def test_reset_requests_are_limited_per_email(client, mailer, monkeypatch):
+    clock = [1000.0]
+    monkeypatch.setattr(login_limiter, "now", lambda: clock[0])
+    register(client)
+    register(client, name="Eve", email="eve@example.com")
+
+    for _ in range(login_limiter.MAX_RESET_REQUESTS + 2):
+        assert request_reset(client).status_code == 204
+
+    assert len(mailer.sent) == login_limiter.MAX_RESET_REQUESTS
+    assert confirm(client, mailer.last_token()).status_code == 204
+
+    assert request_reset(client, "eve@example.com").status_code == 204
+    assert len(mailer.sent) == login_limiter.MAX_RESET_REQUESTS + 1
+
+    clock[0] += login_limiter.RESET_WINDOW_SECONDS + 1
+    request_reset(client)
+    assert len(mailer.sent) == login_limiter.MAX_RESET_REQUESTS + 2

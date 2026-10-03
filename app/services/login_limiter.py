@@ -6,6 +6,8 @@ from app.data_structures import Queue
 MAX_FAILED_ATTEMPTS = 5
 WINDOW_SECONDS = 60.0
 MAX_TRACKED_KEYS = 10000
+MAX_RESET_REQUESTS = 3
+RESET_WINDOW_SECONDS = 900.0
 
 
 def now() -> float:
@@ -78,3 +80,6 @@ class LoginLimiter:
 
 
 login_limiter = LoginLimiter()
+reset_request_limiter = LoginLimiter(
+    max_attempts=MAX_RESET_REQUESTS, window_seconds=RESET_WINDOW_SECONDS
+)
