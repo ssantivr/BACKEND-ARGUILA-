@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from app.api import (
+    auth,
     elevations,
     files,
     materials,
@@ -10,9 +11,9 @@ from app.api import (
     recommendations,
     terrains,
     undo,
-    users,
 )
 from app.errors import (
+    AuthenticationError,
     ConflictError,
     FileTooLargeError,
     NotFoundError,
@@ -21,8 +22,8 @@ from app.errors import (
 
 app = FastAPI(title="ARQUILA API", version="1.0.0")
 
+app.include_router(auth.router)
 app.include_router(files.router)
-app.include_router(users.router)
 app.include_router(projects.router)
 app.include_router(terrains.router)
 app.include_router(materials.router)
@@ -30,6 +31,13 @@ app.include_router(plans.router)
 app.include_router(elevations.router)
 app.include_router(recommendations.router)
 app.include_router(undo.router)
+
+
+@app.exception_handler(AuthenticationError)
+def handle_unauthenticated(request: Request, error: AuthenticationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": str(error)}
+    )
 
 
 @app.exception_handler(NotFoundError)

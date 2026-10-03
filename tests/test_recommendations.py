@@ -1,11 +1,13 @@
 import pytest
 
+from tests.helpers import register
+
 
 @pytest.fixture
 def project_id(client):
-    owner = client.post("/users", json={"name": "Ana", "email": "ana@example.com"})
+    register(client)
     project = client.post(
-        "/projects", json={"owner_id": owner.json()["id"], "name": "Demo House"}
+        "/projects", json={"name": "Demo House"}
     )
     return project.json()["id"]
 
@@ -59,6 +61,8 @@ def test_empty_content_is_rejected(client, project_id):
 
 
 def test_requires_existing_project(client):
+    register(client)
+
     payload = {"category": "design", "content": "x"}
 
     assert client.post("/projects/999/recommendations", json=payload).status_code == 404

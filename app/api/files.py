@@ -2,15 +2,20 @@ from fastapi import APIRouter, Depends, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.database import get_session
+from app.models import User
 from app.schemas import FileRead
 from app.services.file_service import FileService
 
 router = APIRouter(tags=["files"])
 
 
-def get_service(session: Session = Depends(get_session)) -> FileService:
-    return FileService(session)
+def get_service(
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> FileService:
+    return FileService(session, user)
 
 
 @router.post(

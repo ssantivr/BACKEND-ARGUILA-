@@ -3,19 +3,19 @@ from __future__ import annotations  # the `list` method shadows the builtin belo
 from sqlalchemy.orm import Session
 
 from app.errors import NotFoundError
-from app.models import Recommendation
+from app.models import Recommendation, User
 from app.repositories.material_repository import MaterialRepository
-from app.repositories.project_repository import ProjectRepository
 from app.repositories.recommendation_repository import RecommendationRepository
 from app.repositories.terrain_repository import TerrainRepository
 from app.schemas import RecommendationCreate
 from app.services import recommendation_rules
+from app.services.base import ProjectScopedService
 
 
-class RecommendationService:
-    def __init__(self, session: Session) -> None:
+class RecommendationService(ProjectScopedService):
+    def __init__(self, session: Session, user: User) -> None:
+        super().__init__(session, user)
         self.recommendations = RecommendationRepository(session)
-        self.projects = ProjectRepository(session)
         self.terrains = TerrainRepository(session)
         self.materials = MaterialRepository(session)
 
@@ -67,11 +67,7 @@ class RecommendationService:
     def delete(self, recommendation_id: int) -> None:
         recommendation = self.recommendations.get(recommendation_id)
 
-        if recommendation is None:
+        if recommendation is None or not self._owns(recommendation.project_id):
             raise NotFoundError("Recommendation not found")
 
         self.recommendations.delete(recommendation)
-
-    def _ensure_project_exists(self, project_id: int) -> None:
-        if self.projects.get(project_id) is None:
-            raise NotFoundError("Project not found")

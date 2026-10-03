@@ -7,9 +7,9 @@ from sqlalchemy.orm import Session
 
 from app import storage
 from app.errors import NotFoundError
-from app.models import File
+from app.models import File, User
 from app.repositories.file_repository import FileRepository
-from app.repositories.project_repository import ProjectRepository
+from app.services.base import ProjectScopedService
 
 
 def clean_filename(filename: str | None) -> str:
@@ -18,10 +18,10 @@ def clean_filename(filename: str | None) -> str:
     return name[:255] or "file"
 
 
-class FileService:
-    def __init__(self, session: Session) -> None:
+class FileService(ProjectScopedService):
+    def __init__(self, session: Session, user: User) -> None:
+        super().__init__(session, user)
         self.files = FileRepository(session)
-        self.projects = ProjectRepository(session)
 
     def create(self, project_id: int, filename: str | None, stream: BinaryIO) -> File:
         self._ensure_project_exists(project_id)
@@ -50,7 +50,7 @@ class FileService:
     def get(self, file_id: int) -> File:
         file = self.files.get(file_id)
 
-        if file is None:
+        if file is None or not self._owns(file.project_id):
             raise NotFoundError("File not found")
 
         return file
@@ -69,7 +69,3 @@ class FileService:
 
         self.files.delete(file)
         storage.remove(stored_name)
-
-    def _ensure_project_exists(self, project_id: int) -> None:
-        if self.projects.get(project_id) is None:
-            raise NotFoundError("Project not found")

@@ -6,6 +6,10 @@ class ConflictError(Exception):
     pass
 
 
+class AuthenticationError(Exception):
+    pass
+
+
 class UnsupportedFileError(Exception):
     pass
 

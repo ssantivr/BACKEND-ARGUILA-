@@ -1,17 +1,17 @@
 from sqlalchemy.orm import Session
 
 from app.errors import NotFoundError
-from app.models import Terrain
-from app.repositories.project_repository import ProjectRepository
+from app.models import Terrain, User
 from app.repositories.terrain_repository import TerrainRepository
 from app.schemas import TerrainCreate, TerrainUpdate
+from app.services.base import ProjectScopedService
 from app.services.undo_history import snapshot, undo_history
 
 
-class TerrainService:
-    def __init__(self, session: Session) -> None:
+class TerrainService(ProjectScopedService):
+    def __init__(self, session: Session, user: User) -> None:
+        super().__init__(session, user)
         self.terrains = TerrainRepository(session)
-        self.projects = ProjectRepository(session)
 
     def create(self, project_id: int, data: TerrainCreate) -> Terrain:
         self._ensure_project_exists(project_id)
@@ -26,7 +26,7 @@ class TerrainService:
     def get(self, terrain_id: int) -> Terrain:
         terrain = self.terrains.get(terrain_id)
 
-        if terrain is None:
+        if terrain is None or not self._owns(terrain.project_id):
             raise NotFoundError("Terrain not found")
 
         return terrain
@@ -50,7 +50,3 @@ class TerrainService:
         deleted = snapshot("terrain", terrain.name, terrain)
         self.terrains.delete(terrain)
         undo_history.record(deleted)
-
-    def _ensure_project_exists(self, project_id: int) -> None:
-        if self.projects.get(project_id) is None:
-            raise NotFoundError("Project not found")

@@ -1,15 +1,20 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.database import get_session
+from app.models import User
 from app.schemas import DeletedItemRead
 from app.services.undo_service import UndoService
 
 router = APIRouter(tags=["undo"])
 
 
-def get_service(session: Session = Depends(get_session)) -> UndoService:
-    return UndoService(session)
+def get_service(
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> UndoService:
+    return UndoService(session, user)
 
 
 @router.get("/projects/{project_id}/undo", response_model=list[DeletedItemRead])

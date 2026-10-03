@@ -1,5 +1,7 @@
 import pytest
 
+from tests.helpers import register
+
 from app import storage
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"fake image data"
@@ -8,9 +10,9 @@ PDF = b"%PDF-1.7\nfake document"
 
 @pytest.fixture
 def project_id(client):
-    owner = client.post("/users", json={"name": "Ana", "email": "ana@example.com"})
+    register(client)
     project = client.post(
-        "/projects", json={"owner_id": owner.json()["id"], "name": "Demo House"}
+        "/projects", json={"name": "Demo House"}
     )
     return project.json()["id"]
 
@@ -86,6 +88,8 @@ def test_client_path_is_not_used_for_storage(client, project_id, tmp_path):
 
 
 def test_requires_existing_project_and_file(client):
+    register(client)
+
     assert upload(client, 999).status_code == 404
     assert client.get("/projects/999/files").status_code == 404
     assert client.get("/files/999").status_code == 404
@@ -114,7 +118,7 @@ def test_attach_and_detach_file_on_plan_and_elevation(client, project_id):
 
 
 def test_cannot_attach_a_file_from_another_project(client, project_id):
-    other = client.post("/projects", json={"owner_id": 1, "name": "Other"}).json()["id"]
+    other = client.post("/projects", json={"name": "Other"}).json()["id"]
     foreign_file = upload(client, other).json()["id"]
     plan = client.post(f"/projects/{project_id}/plans", json={"title": "Ground"}).json()
 

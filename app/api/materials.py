@@ -1,15 +1,20 @@
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user
 from app.database import get_session
+from app.models import User
 from app.schemas import MaterialCreate, MaterialRead, MaterialUpdate
 from app.services.material_service import MaterialService
 
 router = APIRouter(tags=["materials"])
 
 
-def get_service(session: Session = Depends(get_session)) -> MaterialService:
-    return MaterialService(session)
+def get_service(
+    session: Session = Depends(get_session),
+    user: User = Depends(get_current_user),
+) -> MaterialService:
+    return MaterialService(session, user)
 
 
 @router.post(

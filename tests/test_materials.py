@@ -1,5 +1,7 @@
 import pytest
 
+from tests.helpers import register
+
 CONCRETE = {
     "name": "Concrete",
     "category": "structure",
@@ -12,9 +14,9 @@ BRICK = {"name": "Brick", "category": "masonry", "unit": "unit"}
 
 @pytest.fixture
 def project_id(client):
-    owner = client.post("/users", json={"name": "Ana", "email": "ana@example.com"})
+    register(client)
     project = client.post(
-        "/projects", json={"owner_id": owner.json()["id"], "name": "Demo House"}
+        "/projects", json={"name": "Demo House"}
     )
     return project.json()["id"]
 
@@ -46,6 +48,8 @@ def test_quantity_and_cost_default_to_zero(client, project_id):
 
 
 def test_material_requires_existing_project(client):
+    register(client)
+
     assert create_material(client, 999).status_code == 404
     assert client.get("/projects/999/materials").status_code == 404
 

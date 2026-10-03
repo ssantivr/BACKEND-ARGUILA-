@@ -1,13 +1,15 @@
 import pytest
 
+from tests.helpers import register
+
 TERRAIN = {"name": "Main Lot", "area_m2": 450.5, "slope_percent": 8.5}
 
 
 @pytest.fixture
 def project_id(client):
-    owner = client.post("/users", json={"name": "Ana", "email": "ana@example.com"})
+    register(client)
     project = client.post(
-        "/projects", json={"owner_id": owner.json()["id"], "name": "Demo House"}
+        "/projects", json={"name": "Demo House"}
     )
     return project.json()["id"]
 
@@ -31,6 +33,8 @@ def test_create_and_list_terrains(client, project_id):
 
 
 def test_terrain_requires_existing_project(client):
+    register(client)
+
     assert create_terrain(client, 999).status_code == 404
     assert client.get("/projects/999/terrains").status_code == 404
 

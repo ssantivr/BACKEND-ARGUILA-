@@ -5,15 +5,11 @@ from sqlalchemy.orm import Session
 
 from app.errors import ConflictError, NotFoundError
 from app.models import File
-from app.repositories.project_repository import ProjectRepository
+from app.services.base import ProjectScopedService
 from app.services.undo_history import DeletedRecord, undo_history
 
 
-class UndoService:
-    def __init__(self, session: Session) -> None:
-        self.session = session
-        self.projects = ProjectRepository(session)
-
+class UndoService(ProjectScopedService):
     def list(self, project_id: int) -> list[DeletedRecord]:
         self._ensure_project_exists(project_id)
 
@@ -47,7 +43,3 @@ class UndoService:
             ) from None
 
         return deleted
-
-    def _ensure_project_exists(self, project_id: int) -> None:
-        if self.projects.get(project_id) is None:
-            raise NotFoundError("Project not found")

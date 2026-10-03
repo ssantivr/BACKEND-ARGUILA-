@@ -8,9 +8,15 @@ Orientation = Literal["north", "south", "east", "west"]
 RecommendationSource = Literal["ai", "user", "system"]
 
 
-class UserCreate(BaseModel):
+class RegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     email: str = Field(max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(max_length=255)
+    password: str = Field(max_length=128)
 
 
 class UserRead(BaseModel):
@@ -23,7 +29,6 @@ class UserRead(BaseModel):
 
 
 class ProjectCreate(BaseModel):
-    owner_id: int
     name: str = Field(min_length=1, max_length=160)
     description: str | None = None
     location: str | None = Field(default=None, max_length=255)

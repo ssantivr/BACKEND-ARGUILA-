@@ -2,36 +2,36 @@ from sqlalchemy.orm import Session
 
 from app import storage
 from app.errors import ConflictError, NotFoundError
-from app.models import Project
+from app.models import Project, User
 from app.repositories.project_repository import ProjectRepository
-from app.repositories.user_repository import UserRepository
 from app.schemas import ProjectCreate, ProjectUpdate
 from app.services.undo_history import undo_history
 
 
 class ProjectService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: Session, user: User) -> None:
         self.projects = ProjectRepository(session)
-        self.users = UserRepository(session)
+        self.user = user
 
     def create(self, data: ProjectCreate) -> Project:
-        if self.users.get(data.owner_id) is None:
-            raise NotFoundError("Owner not found")
+        self._ensure_name_is_free(self.user.id, data.name)
 
-        self._ensure_name_is_free(data.owner_id, data.name)
-
-        return self.projects.save(Project(**data.model_dump()))
+        return self.projects.save(
+            Project(owner_id=self.user.id, **data.model_dump())
+        )
 
     def list(
         self,
-        owner_id: int | None = None,
         status: str | None = None,
         search: str | None = None,
     ) -> list[Project]:
-        return self.projects.list(owner_id=owner_id, status=status, search=search)
+        return self.projects.list(
+            owner_id=self.user.id, status=status, search=search
+        )
 
     def get(self, project_id: int) -> Project:
-        project = self.projects.get(project_id)
+        # Someone else's project is reported as not found.
+        project = self.projects.get_owned(project_id, self.user.id)
 
         if project is None:
             raise NotFoundError("Project not found")

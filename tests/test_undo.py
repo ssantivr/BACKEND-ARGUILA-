@@ -1,13 +1,15 @@
 import pytest
 
+from tests.helpers import register
+
 from app.services.undo_history import DeletedRecord, UndoHistory
 
 
 @pytest.fixture
 def project_id(client):
-    owner = client.post("/users", json={"name": "Ana", "email": "ana@example.com"})
+    register(client)
     project = client.post(
-        "/projects", json={"owner_id": owner.json()["id"], "name": "Demo House"}
+        "/projects", json={"name": "Demo House"}
     )
     return project.json()["id"]
 
@@ -99,7 +101,7 @@ def test_undo_conflict_keeps_the_entry_in_history(client, project_id):
 
 
 def test_history_is_separate_per_project_and_dropped_with_the_project(client, project_id):
-    other = client.post("/projects", json={"owner_id": 1, "name": "Other"}).json()["id"]
+    other = client.post("/projects", json={"name": "Other"}).json()["id"]
     material = add_material(client, project_id)
     client.delete(f"/materials/{material['id']}")
 
@@ -108,7 +110,7 @@ def test_history_is_separate_per_project_and_dropped_with_the_project(client, pr
     assert len(history(client, project_id)) == 1
 
     client.delete(f"/projects/{project_id}")
-    recreated = client.post("/projects", json={"owner_id": 1, "name": "Demo House"}).json()
+    recreated = client.post("/projects", json={"name": "Demo House"}).json()
 
     assert history(client, recreated["id"]) == []
 

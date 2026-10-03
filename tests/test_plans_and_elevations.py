@@ -1,14 +1,16 @@
 import pytest
 
+from tests.helpers import register
+
 PLAN = {"title": "Ground floor", "level": "0", "scale": "1:100"}
 ELEVATION = {"title": "Front facade", "orientation": "north"}
 
 
 @pytest.fixture
 def project_id(client):
-    owner = client.post("/users", json={"name": "Ana", "email": "ana@example.com"})
+    register(client)
     project = client.post(
-        "/projects", json={"owner_id": owner.json()["id"], "name": "Demo House"}
+        "/projects", json={"name": "Demo House"}
     )
     return project.json()["id"]
 
@@ -90,6 +92,8 @@ def test_update_and_delete_elevation(client, project_id):
 
 @pytest.mark.parametrize("resource, payload", [("plans", PLAN), ("elevations", ELEVATION)])
 def test_requires_existing_project(client, resource, payload):
+    register(client)
+
     assert create(client, 999, resource, payload).status_code == 404
     assert client.get(f"/projects/999/{resource}").status_code == 404
     assert client.get(f"/{resource}/999").status_code == 404
