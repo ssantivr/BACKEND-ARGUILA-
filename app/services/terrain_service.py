@@ -1,0 +1,52 @@
+from sqlalchemy.orm import Session
+
+from app.errors import NotFoundError
+from app.models import Terrain
+from app.repositories.project_repository import ProjectRepository
+from app.repositories.terrain_repository import TerrainRepository
+from app.schemas import TerrainCreate, TerrainUpdate
+
+
+class TerrainService:
+    def __init__(self, session: Session) -> None:
+        self.terrains = TerrainRepository(session)
+        self.projects = ProjectRepository(session)
+
+    def create(self, project_id: int, data: TerrainCreate) -> Terrain:
+        self._ensure_project_exists(project_id)
+
+        return self.terrains.save(Terrain(project_id=project_id, **data.model_dump()))
+
+    def list(self, project_id: int) -> list[Terrain]:
+        self._ensure_project_exists(project_id)
+
+        return self.terrains.list_by_project(project_id)
+
+    def get(self, terrain_id: int) -> Terrain:
+        terrain = self.terrains.get(terrain_id)
+
+        if terrain is None:
+            raise NotFoundError("Terrain not found")
+
+        return terrain
+
+    def update(self, terrain_id: int, data: TerrainUpdate) -> Terrain:
+        terrain = self.get(terrain_id)
+        changes = data.model_dump(exclude_unset=True)
+
+        # name and area_m2 are NOT NULL: an explicit null means "leave unchanged"
+        for required in ("name", "area_m2"):
+            if changes.get(required, "") is None:
+                del changes[required]
+
+        for field, value in changes.items():
+            setattr(terrain, field, value)
+
+        return self.terrains.save(terrain)
+
+    def delete(self, terrain_id: int) -> None:
+        self.terrains.delete(self.get(terrain_id))
+
+    def _ensure_project_exists(self, project_id: int) -> None:
+        if self.projects.get(project_id) is None:
+            raise NotFoundError("Project not found")
