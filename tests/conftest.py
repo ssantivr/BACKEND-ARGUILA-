@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,10 +9,9 @@ from sqlalchemy.pool import StaticPool
 from app import models
 from app.database import Base, get_session
 from app.main import app
+from app.migrate import apply_migrations
 from app.services.login_limiter import login_limiter
 from app.services.undo_history import undo_history
-
-SCHEMA_FILE = Path(__file__).resolve().parents[2] / "database" / "schema.sql"
 
 
 def create_test_engine() -> Engine:
@@ -37,8 +35,9 @@ def create_test_engine() -> Engine:
     engine = create_engine(url)
     tables = ", ".join(table.name for table in Base.metadata.sorted_tables)
 
+    apply_migrations(engine)
+
     with engine.begin() as connection:
-        connection.exec_driver_sql(SCHEMA_FILE.read_text(encoding="utf-8"))
         connection.exec_driver_sql(f"TRUNCATE {tables} RESTART IDENTITY CASCADE")
 
     return engine
