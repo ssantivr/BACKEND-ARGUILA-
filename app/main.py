@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.api import (
     elevations,
+    files,
     materials,
     plans,
     projects,
@@ -11,10 +12,16 @@ from app.api import (
     undo,
     users,
 )
-from app.errors import ConflictError, NotFoundError
+from app.errors import (
+    ConflictError,
+    FileTooLargeError,
+    NotFoundError,
+    UnsupportedFileError,
+)
 
 app = FastAPI(title="ARQUILA API", version="1.0.0")
 
+app.include_router(files.router)
 app.include_router(users.router)
 app.include_router(projects.router)
 app.include_router(terrains.router)
@@ -37,6 +44,19 @@ def handle_conflict(request: Request, error: ConflictError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT, content={"detail": str(error)}
     )
+
+
+@app.exception_handler(UnsupportedFileError)
+def handle_unsupported_file(request: Request, error: UnsupportedFileError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        content={"detail": str(error)},
+    )
+
+
+@app.exception_handler(FileTooLargeError)
+def handle_file_too_large(request: Request, error: FileTooLargeError) -> JSONResponse:
+    return JSONResponse(status_code=413, content={"detail": str(error)})
 
 
 @app.get("/health")

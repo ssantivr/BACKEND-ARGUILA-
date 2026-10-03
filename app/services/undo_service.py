@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.errors import ConflictError, NotFoundError
+from app.models import File
 from app.repositories.project_repository import ProjectRepository
 from app.services.undo_history import DeletedRecord, undo_history
 
@@ -26,8 +27,16 @@ class UndoService:
         if deleted is None:
             raise NotFoundError("Nothing to undo")
 
+        values = dict(deleted.values)
+
+        # The attached file may have been deleted after the record was.
+        if values.get("file_id") is not None and (
+            self.session.get(File, values["file_id"]) is None
+        ):
+            values["file_id"] = None
+
         try:
-            self.session.add(deleted.model(**deleted.values))
+            self.session.add(deleted.model(**values))
             self.session.commit()
         except IntegrityError:
             # e.g. a material with the same name was created after the deletion.

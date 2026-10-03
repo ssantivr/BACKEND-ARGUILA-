@@ -11,7 +11,9 @@ from app.services.undo_history import undo_history
 
 
 @pytest.fixture
-def client():
+def client(tmp_path, monkeypatch):
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path / "uploads"))
+
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},

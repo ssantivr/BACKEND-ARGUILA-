@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app import storage
 from app.errors import ConflictError, NotFoundError
 from app.models import Project
 from app.repositories.project_repository import ProjectRepository
@@ -55,8 +56,14 @@ class ProjectService:
         return self.projects.save(project)
 
     def delete(self, project_id: int) -> None:
-        self.projects.delete(self.get(project_id))
+        project = self.get(project_id)
+        stored_names = [file.storage_path for file in project.files]
+
+        self.projects.delete(project)
         undo_history.forget(project_id)
+
+        for stored_name in stored_names:
+            storage.remove(stored_name)
 
     def _ensure_name_is_free(self, owner_id: int, name: str) -> None:
         if self.projects.get_by_owner_and_name(owner_id, name) is not None:

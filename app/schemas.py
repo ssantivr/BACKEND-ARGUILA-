@@ -112,12 +112,14 @@ class MaterialRead(BaseModel):
 
 
 class PlanCreate(BaseModel):
+    file_id: int | None = None
     title: str = Field(min_length=1, max_length=160)
     level: str | None = Field(default=None, max_length=60)
     scale: str | None = Field(default=None, max_length=20)
 
 
 class PlanUpdate(BaseModel):
+    file_id: int | None = None
     title: str | None = Field(default=None, min_length=1, max_length=160)
     level: str | None = Field(default=None, max_length=60)
     scale: str | None = Field(default=None, max_length=20)
@@ -136,11 +138,13 @@ class PlanRead(BaseModel):
 
 
 class ElevationCreate(BaseModel):
+    file_id: int | None = None
     title: str = Field(min_length=1, max_length=160)
     orientation: Orientation
 
 
 class ElevationUpdate(BaseModel):
+    file_id: int | None = None
     title: str | None = Field(default=None, min_length=1, max_length=160)
     orientation: Orientation | None = None
 
@@ -176,4 +180,15 @@ class RecommendationRead(BaseModel):
     category: str
     content: str
     source: RecommendationSource
+    created_at: datetime
+
+
+class FileRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    filename: str
+    mime_type: str
+    size_bytes: int
     created_at: datetime

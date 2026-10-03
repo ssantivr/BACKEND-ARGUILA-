@@ -4,3 +4,11 @@ class NotFoundError(Exception):
 
 class ConflictError(Exception):
     pass
+
+
+class UnsupportedFileError(Exception):
+    pass
+
+
+class FileTooLargeError(Exception):
+    pass
