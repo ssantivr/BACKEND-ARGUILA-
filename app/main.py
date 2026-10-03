@@ -10,6 +10,7 @@ from app.api import (
     plans,
     projects,
     recommendations,
+    summary,
     terrains,
     undo,
 )
@@ -35,6 +36,7 @@ app.include_router(elevations.router)
 app.include_router(recommendations.router)
 app.include_router(undo.router)
 app.include_router(conversations.router)
+app.include_router(summary.router)
 
 
 @app.exception_handler(AuthenticationError)

@@ -234,3 +234,13 @@ class MessageRead(BaseModel):
 
 class ConversationDetail(ConversationRead):
     messages: list[MessageRead]
+
+
+class SummaryRead(BaseModel):
+    projects: int
+    draft_projects: int
+    active_projects: int
+    archived_projects: int
+    terrains: int
+    total_area_m2: float
+    materials_total_cost: float
