@@ -1,11 +1,18 @@
 from sqlalchemy.orm import Session
 
 from app.errors import NotFoundError
-from app.models import Terrain, User
+from app.models import Terrain, TerrainPoint, User
 from app.repositories.terrain_repository import TerrainRepository
-from app.schemas import TerrainCreate, TerrainUpdate
+from app.schemas import TerrainCreate, TerrainPointData, TerrainUpdate
 from app.services.base import ProjectScopedService
 from app.services.undo_history import snapshot, undo_history
+
+
+def build_points(points: list[TerrainPointData] | None) -> list[TerrainPoint]:
+    return [
+        TerrainPoint(position=position, x_m=point.x_m, y_m=point.y_m)
+        for position, point in enumerate(points or [])
+    ]
 
 
 class TerrainService(ProjectScopedService):
@@ -16,7 +23,11 @@ class TerrainService(ProjectScopedService):
     def create(self, project_id: int, data: TerrainCreate) -> Terrain:
         self._ensure_project_exists(project_id)
 
-        return self.terrains.save(Terrain(project_id=project_id, **data.model_dump()))
+        values = data.model_dump(exclude={"points"})
+        terrain = Terrain(project_id=project_id, **values)
+        terrain.points = build_points(data.points)
+
+        return self.terrains.save(terrain)
 
     def list(self, project_id: int) -> list[Terrain]:
         self._ensure_project_exists(project_id)
@@ -38,6 +49,12 @@ class TerrainService(ProjectScopedService):
         for required in ("name", "area_m2"):
             if changes.get(required, "") is None:
                 del changes[required]
+
+        if "points" in changes:
+            del changes["points"]
+            terrain.points.clear()
+            self.session.flush()
+            terrain.points = build_points(data.points)
 
         for field, value in changes.items():
             setattr(terrain, field, value)

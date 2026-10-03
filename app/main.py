@@ -19,6 +19,7 @@ from app.errors import (
     AuthenticationError,
     ConflictError,
     FileTooLargeError,
+    InvalidTokenError,
     NotFoundError,
     TooManyAttemptsError,
     UnsupportedFileError,
@@ -50,6 +51,13 @@ def handle_unauthenticated(request: Request, error: AuthenticationError) -> JSON
 def handle_too_many_attempts(request: Request, error: TooManyAttemptsError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_429_TOO_MANY_REQUESTS, content={"detail": str(error)}
+    )
+
+
+@app.exception_handler(InvalidTokenError)
+def handle_invalid_token(request: Request, error: InvalidTokenError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(error)}
     )
 
 

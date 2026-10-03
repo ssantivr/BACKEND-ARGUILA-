@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+
+from app.services.geometry import polygon_area
 
 ProjectStatus = Literal["draft", "active", "archived"]
 Orientation = Literal["north", "south", "east", "west"]
@@ -11,6 +13,15 @@ RecommendationSource = Literal["ai", "user", "system"]
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     email: str = Field(max_length=255, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    password: str = Field(min_length=8, max_length=128)
+
+
+class PasswordResetRequest(BaseModel):
+    email: str = Field(max_length=255)
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str = Field(min_length=10, max_length=200)
     password: str = Field(min_length=8, max_length=128)
 
 
@@ -55,7 +66,29 @@ class ProjectRead(BaseModel):
     updated_at: datetime
 
 
+class TerrainPointData(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    x_m: float = Field(ge=-100000, le=100000)
+    y_m: float = Field(ge=-100000, le=100000)
+
+
+def validate_polygon(points: list[TerrainPointData] | None) -> list[TerrainPointData] | None:
+    if points is not None and polygon_area([(p.x_m, p.y_m) for p in points]) <= 0:
+        raise ValueError("the points must enclose an area greater than zero")
+
+    return points
+
+
+PolygonPoints = Annotated[
+    list[TerrainPointData] | None,
+    Field(default=None, min_length=3, max_length=50),
+    AfterValidator(validate_polygon),
+]
+
+
 class TerrainCreate(BaseModel):
+    points: PolygonPoints
     name: str = Field(min_length=1, max_length=160)
     area_m2: float = Field(gt=0, lt=1e10)
     width_m: float | None = Field(default=None, gt=0, lt=1e6)
@@ -67,6 +100,7 @@ class TerrainCreate(BaseModel):
 
 
 class TerrainUpdate(BaseModel):
+    points: PolygonPoints
     name: str | None = Field(default=None, min_length=1, max_length=160)
     area_m2: float | None = Field(default=None, gt=0, lt=1e10)
     width_m: float | None = Field(default=None, gt=0, lt=1e6)
@@ -86,6 +120,7 @@ class TerrainRead(BaseModel):
     area_m2: float
     width_m: float | None
     length_m: float | None
+    points: list[TerrainPointData]
     slope_percent: float | None
     soil_type: str | None
     latitude: float | None

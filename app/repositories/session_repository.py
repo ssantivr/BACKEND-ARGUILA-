@@ -26,6 +26,10 @@ class SessionRepository:
         )
         self.session.commit()
 
+    def delete_for_user(self, user_id: int) -> None:
+        self.session.execute(delete(UserSession).where(UserSession.user_id == user_id))
+        self.session.commit()
+
     def delete_expired(self, now: datetime) -> None:
         self.session.execute(delete(UserSession).where(UserSession.expires_at <= now))
         self.session.commit()

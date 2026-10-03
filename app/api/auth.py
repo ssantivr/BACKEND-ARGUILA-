@@ -6,7 +6,14 @@ from sqlalchemy.orm import Session
 from app.api.deps import SESSION_COOKIE, get_current_user
 from app.database import get_session
 from app.models import User
-from app.schemas import LoginRequest, RegisterRequest, UserRead
+from app.mailer import Mailer, get_mailer
+from app.schemas import (
+    LoginRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    RegisterRequest,
+    UserRead,
+)
 from app.services.auth_service import SESSION_LIFETIME, AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -56,6 +63,28 @@ def logout(
     service: AuthService = Depends(get_service),
 ):
     service.logout(token)
+
+    response = Response(status_code=204)
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return response
+
+
+@router.post("/password-reset", status_code=204)
+def request_password_reset(
+    data: PasswordResetRequest,
+    service: AuthService = Depends(get_service),
+    mailer: Mailer = Depends(get_mailer),
+):
+    service.request_password_reset(data.email, mailer)
+    return Response(status_code=204)
+
+
+@router.post("/password-reset/confirm", status_code=204)
+def confirm_password_reset(
+    data: PasswordResetConfirm,
+    service: AuthService = Depends(get_service),
+):
+    service.reset_password(data.token, data.password)
 
     response = Response(status_code=204)
     response.delete_cookie(SESSION_COOKIE, path="/")

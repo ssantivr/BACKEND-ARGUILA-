@@ -18,6 +18,10 @@ class TooManyAttemptsError(Exception):
     pass
 
 
+class InvalidTokenError(Exception):
+    pass
+
+
 class UnsupportedFileError(Exception):
     pass
 

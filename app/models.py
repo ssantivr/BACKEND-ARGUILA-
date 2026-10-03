@@ -31,10 +31,25 @@ class User(Base):
     sessions: Mapped[list["UserSession"]] = relationship(
         cascade="all, delete-orphan"
     )
+    password_reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
+        cascade="all, delete-orphan"
+    )
 
 
 class UserSession(Base):
     __tablename__ = "user_sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column()
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(
@@ -103,6 +118,26 @@ class Terrain(Base):
     latitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     longitude: Mapped[Decimal | None] = mapped_column(Numeric(9, 6))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    points: Mapped[list["TerrainPoint"]] = relationship(
+        cascade="all, delete-orphan", order_by="TerrainPoint.position"
+    )
+
+
+class TerrainPoint(Base):
+    __tablename__ = "terrain_points"
+    __table_args__ = (
+        UniqueConstraint("terrain_id", "position"),
+        CheckConstraint("position >= 0"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    terrain_id: Mapped[int] = mapped_column(
+        ForeignKey("terrains.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int] = mapped_column()
+    x_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    y_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
 
 
 class File(Base):

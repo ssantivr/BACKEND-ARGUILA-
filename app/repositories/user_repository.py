@@ -17,6 +17,11 @@ class UserRepository:
     def list(self) -> list[User]:
         return list(self.session.scalars(select(User).order_by(User.id)))
 
+    def save(self, user: User) -> User:
+        self.session.add(user)
+        self.session.commit()
+        return user
+
     def add(self, user: User) -> User:
         self.session.add(user)
         self.session.commit()
