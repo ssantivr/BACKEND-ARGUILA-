@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from functools import lru_cache
 from typing import Protocol
 
@@ -12,6 +13,7 @@ MODEL = "claude-opus-5-5"
 MAX_OUTPUT_TOKENS = 16000
 REQUEST_TIMEOUT_SECONDS = 120.0
 CONNECT_TIMEOUT_SECONDS = 1.0
+RETRY_AFTER_SECONDS = 30.0
 DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
 THINKING_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL)
 
@@ -66,9 +68,21 @@ class OllamaAssistant:
         self._client = client or httpx.Client(
             timeout=httpx.Timeout(REQUEST_TIMEOUT_SECONDS, connect=CONNECT_TIMEOUT_SECONDS)
         )
+        self._unreachable_until = 0.0
+
+    def _is_resting(self) -> bool:
+        return time.monotonic() < self._unreachable_until
+
+    def _rest(self) -> None:
+        self._unreachable_until = time.monotonic() + RETRY_AFTER_SECONDS
 
     def reply(self, system: str, messages: list[dict[str, str]]) -> str:
         base_url = os.environ.get("OLLAMA_URL", DEFAULT_OLLAMA_URL).rstrip("/")
+
+        if self._is_resting():
+            raise AIUnavailableError(
+                "Could not reach the local AI: start Ollama or set ANTHROPIC_API_KEY"
+            )
 
         try:
             response = self._client.post(
@@ -84,6 +98,11 @@ class OllamaAssistant:
         except httpx.HTTPStatusError as error:
             raise AIUnavailableError(
                 f"Local AI request failed (status {error.response.status_code})"
+            ) from None
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            self._rest()
+            raise AIUnavailableError(
+                "Could not reach the local AI: start Ollama or set ANTHROPIC_API_KEY"
             ) from None
         except httpx.HTTPError:
             raise AIUnavailableError(
@@ -114,10 +133,16 @@ class OllamaAssistant:
     def available_model(self) -> str | None:
         base_url = os.environ.get("OLLAMA_URL", DEFAULT_OLLAMA_URL).rstrip("/")
 
+        if self._is_resting():
+            return None
+
         try:
             response = self._client.get(f"{base_url}/api/tags")
             response.raise_for_status()
             models = [model["name"] for model in response.json()["models"]]
+        except (httpx.ConnectError, httpx.ConnectTimeout):
+            self._rest()
+            return None
         except (httpx.HTTPError, KeyError, TypeError, ValueError):
             return None
 

@@ -1,5 +1,5 @@
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models import Terrain
 
@@ -12,7 +12,11 @@ class TerrainRepository:
         return self.session.get(Terrain, terrain_id)
 
     def list_by_project(self, project_id: int) -> list[Terrain]:
-        query = select(Terrain).where(Terrain.project_id == project_id)
+        query = (
+            select(Terrain)
+            .where(Terrain.project_id == project_id)
+            .options(selectinload(Terrain.points))
+        )
         return list(self.session.scalars(query.order_by(Terrain.id)))
 
     def save(self, terrain: Terrain) -> Terrain:

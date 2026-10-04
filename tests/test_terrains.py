@@ -93,3 +93,32 @@ def test_terrain_dimensions_are_optional_and_validated(client, project_id):
 
     assert create_terrain(client, project_id, name="x", width_m=0).status_code == 422
     assert create_terrain(client, project_id, name="x", length_m=-3).status_code == 422
+
+
+def test_listing_terrains_runs_the_same_queries_whatever_their_number(client, project_id):
+    from sqlalchemy import event
+
+    from app.database import get_session
+    from app.main import app
+
+    square = [{"x_m": 0, "y_m": 0}, {"x_m": 10, "y_m": 0}, {"x_m": 10, "y_m": 10}]
+    session = next(app.dependency_overrides[get_session]())
+    statements = []
+    event.listen(
+        session.get_bind(),
+        "before_cursor_execute",
+        lambda *details: statements.append(details[2]),
+    )
+
+    def queries_to_list():
+        statements.clear()
+        assert client.get(f"/projects/{project_id}/terrains").status_code == 200
+        return len(statements)
+
+    create_terrain(client, project_id, points=square)
+    with_one = queries_to_list()
+
+    for index in range(5):
+        create_terrain(client, project_id, name=f"Lot {index}", points=square)
+
+    assert queries_to_list() == with_one

@@ -236,3 +236,28 @@ def test_ollama_available_model_prefers_the_configured_one(monkeypatch):
 
     assert ollama_assistant(installed).available_model() == "qwen2.5"
     assert ollama_assistant(unreachable).available_model() is None
+
+
+def test_ollama_assistant_stops_retrying_for_a_while_after_a_failed_connection(monkeypatch):
+    monkeypatch.setenv("OLLAMA_MODEL", "llama3.2")
+    attempts = []
+
+    def unreachable(request):
+        attempts.append(request)
+        raise httpx.ConnectTimeout("timed out", request=request)
+
+    assistant = ollama_assistant(unreachable)
+
+    for _ in range(3):
+        with pytest.raises(AIUnavailableError):
+            assistant.reply("s", [])
+
+    assert assistant.available_model() is None
+    assert len(attempts) == 1
+
+    assistant._unreachable_until = 0.0
+
+    with pytest.raises(AIUnavailableError):
+        assistant.reply("s", [])
+
+    assert len(attempts) == 2
