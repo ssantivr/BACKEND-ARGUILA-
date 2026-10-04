@@ -81,6 +81,10 @@ def test_assistant_receives_project_data_and_full_history(
     )
     client.post(
         f"/projects/{project_id}/materials",
+        json={"name": "Brick", "unit": "u", "quantity": 1000, "unit_cost": 0.3},
+    )
+    client.post(
+        f"/projects/{project_id}/materials",
         json={"name": "Concrete", "unit": "m3", "quantity": 10, "unit_cost": 110.5},
     )
 
@@ -90,7 +94,10 @@ def test_assistant_receives_project_data_and_full_history(
     system, messages = assistant.calls[1]
     assert "Demo House" in system and "Quito" in system
     assert "Main Lot" in system and "22.5" in system and "clay" in system
-    assert "Concrete" in system and "1105.0" in system
+    assert '"total_cost": 1105.0' in system and '"total_cost": 300.0' in system
+    assert '"materials_total_cost": 1405.0' in system
+    assert '"most_expensive_material": "Concrete"' in system
+    assert system.index("Concrete") < system.index("Brick")
     assert messages == [
         {"role": "user", "content": "first"},
         {"role": "assistant", "content": "reply 1"},
