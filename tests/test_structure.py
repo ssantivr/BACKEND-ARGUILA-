@@ -137,7 +137,7 @@ def test_structure_places_terrains_side_by_side_and_builds_on_the_rectangular_on
     assert body["rooms"][0]["x_m"] == 25
 
 
-def test_structure_uses_the_rooms_of_a_plan_instead_of_its_volume(client, project_id):
+def test_structure_draws_rooms_and_no_volumes_once_a_plan_has_rooms(client, project_id):
     client.post(
         f"/projects/{project_id}/terrains",
         json={"name": "Lot", "area_m2": 600, "width_m": 20, "length_m": 30},
@@ -154,10 +154,18 @@ def test_structure_uses_the_rooms_of_a_plan_instead_of_its_volume(client, projec
 
     rooms = structure(client, project_id).json()["rooms"]
 
+    client.post(
+        f"/projects/{project_id}/rooms",
+        json={**room, "plan_id": upper["id"], "name": "Bedroom"},
+    )
+    client.post(f"/projects/{project_id}/plans", json={"title": "Attic", "level": "2"})
+
+    rooms = structure(client, project_id).json()["rooms"]
+
     assert [(item["kind"], item["name"], item["base_m"]) for item in rooms] == [
         ("room", "Kitchen", 0),
         ("room", "Hall", 0),
-        ("volume", "Upper", 4),
+        ("room", "Bedroom", 4),
     ]
     assert rooms[0] == {
         "kind": "room",
@@ -174,6 +182,22 @@ def test_structure_uses_the_rooms_of_a_plan_instead_of_its_volume(client, projec
         "height_m": 4,
     }
     assert rooms[2]["plan_id"] == upper["id"]
+
+
+def test_structure_keeps_the_height_of_an_empty_level_between_rooms(client, project_id):
+    ground = client.post(f"/projects/{project_id}/plans", json={"title": "Ground"}).json()
+    client.post(f"/projects/{project_id}/plans", json={"title": "Middle", "level": "1"})
+    upper = client.post(f"/projects/{project_id}/plans", json={"title": "Upper"}).json()
+    room = {"name": "Hall", "x_m": 0, "y_m": 0, "width_m": 4, "depth_m": 4}
+    client.post(f"/projects/{project_id}/rooms", json={**room, "plan_id": ground["id"]})
+    client.post(f"/projects/{project_id}/rooms", json={**room, "plan_id": upper["id"]})
+
+    rooms = structure(client, project_id).json()["rooms"]
+
+    assert [(item["plan_title"], item["base_m"]) for item in rooms] == [
+        ("Ground", 0),
+        ("Upper", 6),
+    ]
 
 
 def test_structure_skips_plans_that_are_not_a_floor(client, project_id):
@@ -236,9 +260,7 @@ def test_structure_places_components_on_their_level(client, project_id):
         ("C1", 0),
         ("V1", 3),
     ]
-    assert [(room["kind"], room["name"], room["base_m"]) for room in body["rooms"]] == [
-        ("volume", "Upper", 3.5)
-    ]
+    assert body["rooms"] == []
 
 
 def test_structure_hangs_a_lone_beam_from_the_default_storey_height(client, project_id):

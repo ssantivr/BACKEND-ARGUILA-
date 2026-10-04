@@ -192,6 +192,7 @@ class StructureService(ProjectScopedService):
 
         rooms: list[StructureRoom] = []
         components: list[StructureComponent] = []
+        modelled = bool(rooms_by_plan or components_by_plan)
         base = 0.0
 
         for plan in self.plans.list_by_project(project_id):
@@ -207,7 +208,7 @@ class StructureService(ProjectScopedService):
                 build_component(plan, component, base, height) for component in own_components
             )
 
-            if not own_rooms and not own_components and lot is not None:
+            if not modelled and lot is not None:
                 rooms.append(build_volume(plan, lot, base))
 
             base += height
