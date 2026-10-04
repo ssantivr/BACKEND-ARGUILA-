@@ -46,7 +46,9 @@ class ProjectTemplate:
         return sum(level.area_m2 for level in self.levels)
 
 
-def row(y_m: float, depth_m: float, start_x_m: float, *rooms: tuple[str, float]) -> tuple[TemplateRoom, ...]:
+def row(
+    y_m: float, depth_m: float, start_x_m: float, *rooms: tuple[str, float]
+) -> tuple[TemplateRoom, ...]:
     placed = []
     x_m = start_x_m
 
@@ -63,7 +65,14 @@ def apartment_floor(title: str, level: str) -> TemplateLevel:
         level,
         2.8,
         row(4, 6, 2.5, ("Apto. A · social", 6.5), ("Circulación", 2), ("Apto. B · social", 6.5))
-        + row(10, 6, 2.5, ("Apto. A · habitaciones", 6.5), ("Escalera", 2), ("Apto. B · habitaciones", 6.5)),
+        + row(
+            10,
+            6,
+            2.5,
+            ("Apto. A · habitaciones", 6.5),
+            ("Escalera", 2),
+            ("Apto. B · habitaciones", 6.5),
+        ),
     )
 
 

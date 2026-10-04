@@ -6,7 +6,6 @@ from sqlalchemy import Engine, create_engine, make_url
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
-from app import models
 from app.database import Base, get_session
 from app.main import app
 from app.migrate import apply_migrations

@@ -15,16 +15,12 @@ BRICK = {"name": "Brick", "category": "masonry", "unit": "unit"}
 @pytest.fixture
 def project_id(client):
     register(client)
-    project = client.post(
-        "/projects", json={"name": "Demo House"}
-    )
+    project = client.post("/projects", json={"name": "Demo House"})
     return project.json()["id"]
 
 
 def create_material(client, project_id, payload=CONCRETE, **overrides):
-    return client.post(
-        f"/projects/{project_id}/materials", json={**payload, **overrides}
-    )
+    return client.post(f"/projects/{project_id}/materials", json={**payload, **overrides})
 
 
 def test_create_and_get_material(client, project_id):

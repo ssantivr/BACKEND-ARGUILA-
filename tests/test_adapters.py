@@ -31,7 +31,9 @@ class FakeSmtp:
         self.calls.append(("login", user, password))
 
     def send_message(self, message):
-        self.calls.append(("send", message["From"], message["To"], message["Subject"], message.get_content()))
+        self.calls.append(
+            ("send", message["From"], message["To"], message["Subject"], message.get_content())
+        )
 
 
 @pytest.fixture
@@ -112,7 +114,12 @@ def text(value):
 
 def test_claude_assistant_returns_only_the_text_blocks():
     assistant, messages = claude_assistant(
-        response("end_turn", SimpleNamespace(type="thinking", thinking=""), text("Hola. "), text("Listo."))
+        response(
+            "end_turn",
+            SimpleNamespace(type="thinking", thinking=""),
+            text("Hola. "),
+            text("Listo."),
+        )
     )
 
     reply = assistant.reply("system prompt", [{"role": "user", "content": "hola"}])
@@ -137,8 +144,12 @@ def test_claude_assistant_turns_sdk_errors_into_the_application_error():
     failures = [
         anthropic.APIConnectionError(request=request),
         anthropic.RateLimitError("busy", response=httpx.Response(429, request=request), body=None),
-        anthropic.AuthenticationError("bad key", response=httpx.Response(401, request=request), body=None),
-        anthropic.InternalServerError("down", response=httpx.Response(500, request=request), body=None),
+        anthropic.AuthenticationError(
+            "bad key", response=httpx.Response(401, request=request), body=None
+        ),
+        anthropic.InternalServerError(
+            "down", response=httpx.Response(500, request=request), body=None
+        ),
     ]
 
     for failure in failures:
@@ -222,8 +233,12 @@ def test_local_assistant_is_chosen_without_an_api_key(monkeypatch):
 
 def test_ollama_available_model_prefers_the_configured_one(monkeypatch):
     monkeypatch.delenv("OLLAMA_MODEL", raising=False)
-    installed = lambda request: httpx.Response(200, json={"models": [{"name": "llama3.2"}]})
-    empty = lambda request: httpx.Response(200, json={"models": []})
+
+    def installed(request):
+        return httpx.Response(200, json={"models": [{"name": "llama3.2"}]})
+
+    def empty(request):
+        return httpx.Response(200, json={"models": []})
 
     def unreachable(request):
         raise httpx.ConnectError("refused", request=request)

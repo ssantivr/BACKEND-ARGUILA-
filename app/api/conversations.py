@@ -46,19 +46,13 @@ def create_conversation(
     return service.create(project_id, data.title)
 
 
-@router.get(
-    "/projects/{project_id}/conversations", response_model=list[ConversationRead]
-)
-def list_conversations(
-    project_id: int, service: ConversationService = Depends(get_service)
-):
+@router.get("/projects/{project_id}/conversations", response_model=list[ConversationRead])
+def list_conversations(project_id: int, service: ConversationService = Depends(get_service)):
     return service.list(project_id)
 
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetail)
-def get_conversation(
-    conversation_id: int, service: ConversationService = Depends(get_service)
-):
+def get_conversation(conversation_id: int, service: ConversationService = Depends(get_service)):
     return service.get(conversation_id)
 
 
@@ -77,8 +71,6 @@ def send_message(
 
 
 @router.delete("/conversations/{conversation_id}", status_code=204)
-def delete_conversation(
-    conversation_id: int, service: ConversationService = Depends(get_service)
-):
+def delete_conversation(conversation_id: int, service: ConversationService = Depends(get_service)):
     service.delete(conversation_id)
     return Response(status_code=204)

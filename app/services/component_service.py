@@ -18,9 +18,7 @@ class ComponentService(ProjectScopedService):
         self._ensure_project_exists(project_id)
         self._ensure_plan_in_project(data.plan_id, project_id)
 
-        return self.components.save(
-            StructuralComponent(project_id=project_id, **data.model_dump())
-        )
+        return self.components.save(StructuralComponent(project_id=project_id, **data.model_dump()))
 
     def list(self, project_id: int, kind: str | None = None) -> list[StructuralComponent]:
         self._ensure_project_exists(project_id)

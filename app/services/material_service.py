@@ -17,9 +17,7 @@ class MaterialService(ProjectScopedService):
         self._ensure_project_exists(project_id)
         self._ensure_name_is_free(project_id, data.name)
 
-        return self.materials.save(
-            Material(project_id=project_id, **data.model_dump())
-        )
+        return self.materials.save(Material(project_id=project_id, **data.model_dump()))
 
     def list(self, project_id: int, category: str | None = None) -> list[Material]:
         self._ensure_project_exists(project_id)

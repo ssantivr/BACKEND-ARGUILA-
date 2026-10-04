@@ -27,9 +27,7 @@ class FileRepository:
 
     def delete(self, file: File) -> None:
         for model in (Plan, Elevation):
-            self.session.execute(
-                update(model).where(model.file_id == file.id).values(file_id=None)
-            )
+            self.session.execute(update(model).where(model.file_id == file.id).values(file_id=None))
 
         self.session.delete(file)
         self.session.commit()

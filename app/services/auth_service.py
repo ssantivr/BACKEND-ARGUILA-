@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -24,7 +24,7 @@ RESET_TOKEN_LIFETIME = timedelta(minutes=30)
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def normalize_email(email: str) -> str:
@@ -136,9 +136,7 @@ class AuthService:
         if not token:
             raise AuthenticationError("Not authenticated")
 
-        user_session = self.sessions.get_by_token_hash(
-            security.hash_session_token(token)
-        )
+        user_session = self.sessions.get_by_token_hash(security.hash_session_token(token))
 
         if user_session is None or user_session.expires_at <= _now():
             raise AuthenticationError("Not authenticated")

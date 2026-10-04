@@ -13,14 +13,10 @@ class MaterialRepository:
 
     def get_by_project_and_name(self, project_id: int, name: str) -> Material | None:
         return self.session.scalar(
-            select(Material).where(
-                Material.project_id == project_id, Material.name == name
-            )
+            select(Material).where(Material.project_id == project_id, Material.name == name)
         )
 
-    def list_by_project(
-        self, project_id: int, category: str | None = None
-    ) -> list[Material]:
+    def list_by_project(self, project_id: int, category: str | None = None) -> list[Material]:
         query = select(Material).where(Material.project_id == project_id)
 
         if category is not None:

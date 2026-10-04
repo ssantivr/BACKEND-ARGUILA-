@@ -1,8 +1,7 @@
 import pytest
 
-from tests.helpers import register
-
 from app import storage
+from tests.helpers import register
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"fake image data"
 PDF = b"%PDF-1.7\nfake document"
@@ -11,16 +10,12 @@ PDF = b"%PDF-1.7\nfake document"
 @pytest.fixture
 def project_id(client):
     register(client)
-    project = client.post(
-        "/projects", json={"name": "Demo House"}
-    )
+    project = client.post("/projects", json={"name": "Demo House"})
     return project.json()["id"]
 
 
 def upload(client, project_id, name="plan.png", content=PNG, declared="image/png"):
-    return client.post(
-        f"/projects/{project_id}/files", files={"file": (name, content, declared)}
-    )
+    return client.post(f"/projects/{project_id}/files", files={"file": (name, content, declared)})
 
 
 def stored_files(tmp_path):

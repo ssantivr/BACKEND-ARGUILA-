@@ -31,6 +31,5 @@ def load_env_file(path: Path) -> list[str]:
 def require_database_url() -> None:
     if not os.environ.get("DATABASE_URL"):
         raise SystemExit(
-            "DATABASE_URL is not set. Copy backend/.env.example to backend/.env "
-            "and fill it in."
+            "DATABASE_URL is not set. Copy backend/.env.example to backend/.env and fill it in."
         )

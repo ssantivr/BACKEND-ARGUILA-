@@ -26,9 +26,7 @@ class ProjectRepository:
         status: str | None = None,
         search: str | None = None,
     ) -> list[Project]:
-        query = (
-            select(Project).where(Project.owner_id == owner_id).order_by(Project.id)
-        )
+        query = select(Project).where(Project.owner_id == owner_id).order_by(Project.id)
 
         if status is not None:
             query = query.where(Project.status == status)

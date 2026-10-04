@@ -19,9 +19,7 @@ class ElevationService(ProjectScopedService):
         self._ensure_project_exists(project_id)
         self._ensure_file_in_project(data.file_id, project_id)
 
-        return self.elevations.save(
-            Elevation(project_id=project_id, **data.model_dump())
-        )
+        return self.elevations.save(Elevation(project_id=project_id, **data.model_dump()))
 
     def list(self, project_id: int, orientation: str | None = None) -> list[Elevation]:
         self._ensure_project_exists(project_id)

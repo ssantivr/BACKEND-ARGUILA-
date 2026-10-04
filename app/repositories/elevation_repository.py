@@ -11,9 +11,7 @@ class ElevationRepository:
     def get(self, elevation_id: int) -> Elevation | None:
         return self.session.get(Elevation, elevation_id)
 
-    def list_by_project(
-        self, project_id: int, orientation: str | None = None
-    ) -> list[Elevation]:
+    def list_by_project(self, project_id: int, orientation: str | None = None) -> list[Elevation]:
         query = select(Elevation).where(Elevation.project_id == project_id)
 
         if orientation is not None:

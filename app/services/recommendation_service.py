@@ -34,9 +34,7 @@ class RecommendationService(ProjectScopedService):
     ) -> list[Recommendation]:
         self._ensure_project_exists(project_id)
 
-        return self.recommendations.list_by_project(
-            project_id, category=category, source=source
-        )
+        return self.recommendations.list_by_project(project_id, category=category, source=source)
 
     def generate(self, project_id: int) -> list[Recommendation]:
         self._ensure_project_exists(project_id)

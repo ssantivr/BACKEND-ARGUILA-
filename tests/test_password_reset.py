@@ -107,7 +107,10 @@ def test_reset_token_is_not_stored_in_plain_text(client, mailer):
     register(client)
     request_reset(client)
 
-    assert confirm(client, auth_service.security.hash_session_token(mailer.last_token())).status_code == 400
+    assert (
+        confirm(client, auth_service.security.hash_session_token(mailer.last_token())).status_code
+        == 400
+    )
 
 
 def test_reset_requests_are_limited_per_email(client, mailer, monkeypatch):

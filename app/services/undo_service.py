@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 from app.errors import ConflictError, NotFoundError
 from app.models import File
@@ -64,7 +63,7 @@ class UndoService(ProjectScopedService):
         if instance is None:
             raise NotFoundError("Nothing to redo")
 
-        label = getattr(instance, "name", None) or getattr(instance, "title")
+        label = getattr(instance, "name", None) or instance.title
         deleted = snapshot(restored.deleted.kind, label, instance)
         self.session.delete(instance)
         self.session.commit()

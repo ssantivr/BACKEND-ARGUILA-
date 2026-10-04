@@ -9,16 +9,12 @@ ELEVATION = {"title": "Front facade", "orientation": "north"}
 @pytest.fixture
 def project_id(client):
     register(client)
-    project = client.post(
-        "/projects", json={"name": "Demo House"}
-    )
+    project = client.post("/projects", json={"name": "Demo House"})
     return project.json()["id"]
 
 
 def create(client, project_id, resource, payload, **overrides):
-    return client.post(
-        f"/projects/{project_id}/{resource}", json={**payload, **overrides}
-    )
+    return client.post(f"/projects/{project_id}/{resource}", json={**payload, **overrides})
 
 
 def test_create_and_list_plans(client, project_id):

@@ -51,9 +51,9 @@ def test_room_measures_must_be_positive(client, project_id, plan_id):
 
 def test_room_plan_must_belong_to_the_project(client, project_id, plan_id):
     other_project = client.post("/projects", json={"name": "Tower"}).json()["id"]
-    foreign_plan = client.post(
-        f"/projects/{other_project}/plans", json={"title": "Other"}
-    ).json()["id"]
+    foreign_plan = client.post(f"/projects/{other_project}/plans", json={"title": "Other"}).json()[
+        "id"
+    ]
     room_id = create(client, project_id, plan_id).json()["id"]
 
     assert create(client, project_id, foreign_plan).status_code == 404
@@ -64,9 +64,7 @@ def test_room_plan_must_belong_to_the_project(client, project_id, plan_id):
 def test_update_and_delete_room(client, project_id, plan_id):
     room_id = create(client, project_id, plan_id).json()["id"]
 
-    response = client.patch(
-        f"/rooms/{room_id}", json={"name": "Hall", "width_m": 6, "x_m": None}
-    )
+    response = client.patch(f"/rooms/{room_id}", json={"name": "Hall", "width_m": 6, "x_m": None})
 
     assert response.status_code == 200
     assert response.json()["name"] == "Hall"

@@ -21,9 +21,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 def apply_migrations(engine: Engine, directory: Path = MIGRATIONS_DIR) -> list[str]:
     with engine.begin() as connection:
         connection.exec_driver_sql(CREATE_HISTORY_TABLE)
-        applied = set(
-            connection.execute(text("SELECT version FROM schema_migrations")).scalars()
-        )
+        applied = set(connection.execute(text("SELECT version FROM schema_migrations")).scalars())
 
     newly_applied = []
 

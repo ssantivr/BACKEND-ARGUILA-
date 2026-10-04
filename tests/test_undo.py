@@ -1,16 +1,13 @@
 import pytest
 
-from tests.helpers import register
-
 from app.services.undo_history import DeletedRecord, UndoHistory
+from tests.helpers import register
 
 
 @pytest.fixture
 def project_id(client):
     register(client)
-    project = client.post(
-        "/projects", json={"name": "Demo House"}
-    )
+    project = client.post("/projects", json={"name": "Demo House"})
     return project.json()["id"]
 
 
@@ -21,7 +18,13 @@ def add(client, project_id, resource, payload):
 
 
 def add_material(client, project_id, name="Concrete"):
-    payload = {"name": name, "category": "structure", "unit": "m3", "quantity": 85, "unit_cost": 110.25}
+    payload = {
+        "name": name,
+        "category": "structure",
+        "unit": "m3",
+        "quantity": 85,
+        "unit_cost": 110.25,
+    }
     return add(client, project_id, "materials", payload)
 
 
@@ -53,9 +56,7 @@ def test_undo_restores_a_deleted_material_with_its_data(client, project_id):
 def test_undo_is_last_in_first_out_across_resource_types(client, project_id):
     terrain = add(client, project_id, "terrains", {"name": "Main Lot", "area_m2": 450})
     plan = add(client, project_id, "plans", {"title": "Ground floor"})
-    elevation = add(
-        client, project_id, "elevations", {"title": "Front", "orientation": "north"}
-    )
+    elevation = add(client, project_id, "elevations", {"title": "Front", "orientation": "north"})
 
     client.delete(f"/terrains/{terrain['id']}")
     client.delete(f"/plans/{plan['id']}")

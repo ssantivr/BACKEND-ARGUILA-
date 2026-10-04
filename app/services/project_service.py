@@ -16,18 +16,14 @@ class ProjectService:
     def create(self, data: ProjectCreate) -> Project:
         self._ensure_name_is_free(self.user.id, data.name)
 
-        return self.projects.save(
-            Project(owner_id=self.user.id, **data.model_dump())
-        )
+        return self.projects.save(Project(owner_id=self.user.id, **data.model_dump()))
 
     def list(
         self,
         status: str | None = None,
         search: str | None = None,
     ) -> list[Project]:
-        return self.projects.list(
-            owner_id=self.user.id, status=status, search=search
-        )
+        return self.projects.list(owner_id=self.user.id, status=status, search=search)
 
     def get(self, project_id: int) -> Project:
         project = self.projects.get_owned(project_id, self.user.id)

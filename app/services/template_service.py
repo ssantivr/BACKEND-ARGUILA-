@@ -47,7 +47,7 @@ class TemplateService:
         self.session.add(project)
         self.session.flush()
 
-        for plan, level in zip(project.plans, template.levels):
+        for plan, level in zip(project.plans, template.levels, strict=True):
             plan.rooms = [
                 Room(
                     project_id=project.id,

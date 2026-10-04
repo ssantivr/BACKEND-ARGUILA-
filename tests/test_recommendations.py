@@ -6,9 +6,7 @@ from tests.helpers import register
 @pytest.fixture
 def project_id(client):
     register(client)
-    project = client.post(
-        "/projects", json={"name": "Demo House"}
-    )
+    project = client.post("/projects", json={"name": "Demo House"})
     return project.json()["id"]
 
 
@@ -146,9 +144,7 @@ def test_generate_replaces_system_recommendations_but_keeps_user_ones(client, pr
 
 
 def test_invalid_source_filter_is_rejected(client, project_id):
-    response = client.get(
-        f"/projects/{project_id}/recommendations", params={"source": "robot"}
-    )
+    response = client.get(f"/projects/{project_id}/recommendations", params={"source": "robot"})
 
     assert response.status_code == 422
 

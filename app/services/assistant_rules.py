@@ -104,17 +104,13 @@ def drawings_answer(project: Project) -> str:
 
     if project.elevations:
         lines.append(
-            "Elevaciones: "
-            + ", ".join(elevation.title for elevation in project.elevations)
-            + "."
+            "Elevaciones: " + ", ".join(elevation.title for elevation in project.elevations) + "."
         )
 
     return "\n".join(lines)
 
 
-def overview(
-    project: Project, terrains: Sequence[Terrain], materials: Sequence[Material]
-) -> str:
+def overview(project: Project, terrains: Sequence[Terrain], materials: Sequence[Material]) -> str:
     parts = [
         count(len(terrains), "terreno", "terrenos"),
         count(len(materials), "material", "materiales"),
@@ -122,10 +118,7 @@ def overview(
         count(len(project.elevations), "elevación", "elevaciones"),
     ]
 
-    return (
-        f'El proyecto "{project.name}" tiene {", ".join(parts[:-1])} y {parts[-1]}. '
-        + HELP
-    )
+    return f'El proyecto "{project.name}" tiene {", ".join(parts[:-1])} y {parts[-1]}. ' + HELP
 
 
 def answer(

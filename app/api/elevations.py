@@ -54,8 +54,6 @@ def update_elevation(
 
 
 @router.delete("/elevations/{elevation_id}", status_code=204)
-def delete_elevation(
-    elevation_id: int, service: ElevationService = Depends(get_service)
-):
+def delete_elevation(elevation_id: int, service: ElevationService = Depends(get_service)):
     service.delete(elevation_id)
     return Response(status_code=204)

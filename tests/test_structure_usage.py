@@ -29,8 +29,7 @@ def test_context_without_previous_messages_has_only_the_new_one():
 
 def test_context_drops_the_oldest_messages_beyond_the_limit():
     messages = [
-        message("user" if index % 2 == 0 else "assistant", str(index))
-        for index in range(10)
+        message("user" if index % 2 == 0 else "assistant", str(index)) for index in range(10)
     ]
 
     context = build_context(messages, "new", limit=4)
@@ -40,8 +39,7 @@ def test_context_drops_the_oldest_messages_beyond_the_limit():
 
 def test_context_always_starts_with_a_user_message():
     messages = [
-        message("user" if index % 2 == 0 else "assistant", str(index))
-        for index in range(6)
+        message("user" if index % 2 == 0 else "assistant", str(index)) for index in range(6)
     ]
 
     context = build_context(messages, "new", limit=3)
@@ -65,9 +63,7 @@ def test_rank_by_cost_orders_from_most_to_least_expensive():
 
 
 def test_rank_by_cost_keeps_the_original_order_between_equal_costs():
-    ranked = rank_by_cost(
-        [material("A", 2, 5), material("B", 1, 10), material("C", 5, 2)]
-    )
+    ranked = rank_by_cost([material("A", 2, 5), material("B", 1, 10), material("C", 5, 2)])
 
     assert [item.name for item in ranked] == ["A", "B", "C"]
 

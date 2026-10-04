@@ -27,9 +27,7 @@ class Assistant(Protocol):
 
 class ClaudeAssistant:
     def __init__(self) -> None:
-        self._client = anthropic.Anthropic(
-            timeout=REQUEST_TIMEOUT_SECONDS, max_retries=1
-        )
+        self._client = anthropic.Anthropic(timeout=REQUEST_TIMEOUT_SECONDS, max_retries=1)
 
     def reply(self, system: str, messages: list[dict[str, str]]) -> str:
         try:
@@ -56,9 +54,7 @@ class ClaudeAssistant:
         if response.stop_reason == "refusal":
             return REFUSAL_REPLY
 
-        text = "".join(
-            block.text for block in response.content if block.type == "text"
-        ).strip()
+        text = "".join(block.text for block in response.content if block.type == "text").strip()
 
         return text or EMPTY_REPLY
 
@@ -124,9 +120,7 @@ class OllamaAssistant:
         models = response.json()["models"]
 
         if not models:
-            raise AIUnavailableError(
-                "Local AI has no models: download one with 'ollama pull'"
-            )
+            raise AIUnavailableError("Local AI has no models: download one with 'ollama pull'")
 
         return models[0]["name"]
 

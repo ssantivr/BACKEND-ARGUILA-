@@ -38,10 +38,7 @@ def terrain_suggestions(terrains: Sequence[Terrain]) -> Iterator[Suggestion]:
                 "medium",
             )
 
-        if (
-            terrain.slope_percent is not None
-            and terrain.slope_percent >= STEEP_SLOPE_PERCENT
-        ):
+        if terrain.slope_percent is not None and terrain.slope_percent >= STEEP_SLOPE_PERCENT:
             yield (
                 "terrain",
                 f'El terreno "{terrain.name}" tiene una pendiente de '
@@ -83,14 +80,10 @@ def material_suggestions(materials: Sequence[Material]) -> Iterator[Suggestion]:
     if without_quantity:
         yield (
             "materials",
-            "Estos materiales tienen cantidad cero: "
-            + ", ".join(without_quantity)
-            + ".",
+            "Estos materiales tienen cantidad cero: " + ", ".join(without_quantity) + ".",
             "low",
         )
 
 
-def evaluate(
-    terrains: Sequence[Terrain], materials: Sequence[Material]
-) -> list[Suggestion]:
+def evaluate(terrains: Sequence[Terrain], materials: Sequence[Material]) -> list[Suggestion]:
     return [*terrain_suggestions(terrains), *material_suggestions(materials)]

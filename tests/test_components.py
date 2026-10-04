@@ -58,8 +58,7 @@ def test_filter_components_by_kind(client, project_id, plan_id):
 
     assert [component["name"] for component in walls] == ["M1"]
     assert (
-        client.get(f"/projects/{project_id}/components", params={"kind": "roof"}).status_code
-        == 422
+        client.get(f"/projects/{project_id}/components", params={"kind": "roof"}).status_code == 422
     )
 
 
@@ -73,9 +72,9 @@ def test_component_data_is_validated(client, project_id, plan_id):
 
 def test_component_plan_must_belong_to_the_project(client, project_id, plan_id):
     other_project = client.post("/projects", json={"name": "Tower"}).json()["id"]
-    foreign_plan = client.post(
-        f"/projects/{other_project}/plans", json={"title": "Other"}
-    ).json()["id"]
+    foreign_plan = client.post(f"/projects/{other_project}/plans", json={"title": "Other"}).json()[
+        "id"
+    ]
     component_id = create(client, project_id, plan_id).json()["id"]
 
     assert create(client, project_id, foreign_plan).status_code == 404

@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 LOGGER_NAME = "arquila"
 STANDARD_FIELDS = set(logging.LogRecord("", 0, "", 0, "", (), None).__dict__) | {
@@ -15,9 +15,7 @@ STANDARD_FIELDS = set(logging.LogRecord("", 0, "", 0, "", (), None).__dict__) | 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         entry = {
-            "time": datetime.fromtimestamp(record.created, timezone.utc).isoformat(
-                timespec="milliseconds"
-            ),
+            "time": datetime.fromtimestamp(record.created, UTC).isoformat(timespec="milliseconds"),
             "level": record.levelname.lower(),
             "event": record.getMessage(),
         }

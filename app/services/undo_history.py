@@ -48,9 +48,7 @@ class UndoHistory:
 
     def record(self, deleted: DeletedRecord, keep_redo: bool = False) -> None:
         with self._lock:
-            entries = self._by_project.setdefault(
-                deleted.project_id, DoublyLinkedList()
-            )
+            entries = self._by_project.setdefault(deleted.project_id, DoublyLinkedList())
             entries.push_back(deleted)
 
             if len(entries) > self._capacity:

@@ -18,9 +18,7 @@ def get_service(
 
 
 @router.get("/projects/{project_id}/undo", response_model=list[DeletedItemRead])
-def list_undoable_deletions(
-    project_id: int, service: UndoService = Depends(get_service)
-):
+def list_undoable_deletions(project_id: int, service: UndoService = Depends(get_service)):
     return service.list(project_id)
 
 

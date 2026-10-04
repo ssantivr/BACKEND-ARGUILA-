@@ -8,9 +8,7 @@ TERRAIN = {"name": "Main Lot", "area_m2": 450.5, "slope_percent": 8.5}
 @pytest.fixture
 def project_id(client):
     register(client)
-    project = client.post(
-        "/projects", json={"name": "Demo House"}
-    )
+    project = client.post("/projects", json={"name": "Demo House"})
     return project.json()["id"]
 
 

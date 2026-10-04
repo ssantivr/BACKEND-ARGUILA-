@@ -27,7 +27,5 @@ class PasswordResetRepository:
         self.session.commit()
 
     def delete_expired(self, now: datetime) -> None:
-        self.session.execute(
-            delete(PasswordResetToken).where(PasswordResetToken.expires_at <= now)
-        )
+        self.session.execute(delete(PasswordResetToken).where(PasswordResetToken.expires_at <= now))
         self.session.commit()

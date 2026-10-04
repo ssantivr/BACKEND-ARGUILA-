@@ -237,7 +237,14 @@ def test_structure_places_components_on_their_level(client, project_id):
     base = {"plan_id": ground["id"], "x_m": 2, "y_m": 4}
     column = client.post(
         f"/projects/{project_id}/components",
-        json={**base, "kind": "column", "name": "C1", "width_m": 0.4, "depth_m": 0.4, "height_m": 3.5},
+        json={
+            **base,
+            "kind": "column",
+            "name": "C1",
+            "width_m": 0.4,
+            "depth_m": 0.4,
+            "height_m": 3.5,
+        },
     ).json()
     client.post(
         f"/projects/{project_id}/components",
@@ -294,7 +301,14 @@ def test_structure_shows_rooms_without_any_terrain(client, project_id):
     plan = client.post(f"/projects/{project_id}/plans", json={"title": "Ground"}).json()
     client.post(
         f"/projects/{project_id}/rooms",
-        json={"plan_id": plan["id"], "name": "Hall", "x_m": 0, "y_m": 0, "width_m": 4, "depth_m": 4},
+        json={
+            "plan_id": plan["id"],
+            "name": "Hall",
+            "x_m": 0,
+            "y_m": 0,
+            "width_m": 4,
+            "depth_m": 4,
+        },
     )
 
     body = structure(client, project_id).json()
@@ -355,7 +369,9 @@ def modelled(client, project_id):
 
 
 def test_surface_of_a_room_and_a_component_is_saved(client, project_id, modelled):
-    room = client.patch(surface_url(project_id, "room", modelled["room"]), json={"surface": "glass"})
+    room = client.patch(
+        surface_url(project_id, "room", modelled["room"]), json={"surface": "glass"}
+    )
     column = client.patch(
         surface_url(project_id, "column", modelled["column"]), json={"surface": "steel"}
     )

@@ -38,7 +38,5 @@ def list_templates(service: TemplateService = Depends(get_service)):
     response_model=ProjectRead,
     status_code=status.HTTP_201_CREATED,
 )
-def create_project_from_template(
-    template_id: str, service: TemplateService = Depends(get_service)
-):
+def create_project_from_template(template_id: str, service: TemplateService = Depends(get_service)):
     return service.create_project(template_id)

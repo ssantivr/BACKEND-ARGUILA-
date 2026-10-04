@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import SESSION_COOKIE, get_current_user
 from app.database import get_session
-from app.models import User
 from app.mailer import Mailer, get_mailer
+from app.models import User
 from app.schemas import (
     LoginRequest,
     PasswordResetConfirm,

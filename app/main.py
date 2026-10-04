@@ -31,7 +31,6 @@ from app.errors import (
     TooManyAttemptsError,
     UnsupportedFileError,
 )
-
 from app.logs import logger
 
 DEFAULT_APP_URL = "http://localhost:5173"
@@ -109,9 +108,7 @@ app.include_router(summary.router)
 
 @app.exception_handler(AuthenticationError)
 def handle_unauthenticated(request: Request, error: AuthenticationError) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": str(error)}
-    )
+    return JSONResponse(status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": str(error)})
 
 
 @app.exception_handler(TooManyAttemptsError)
@@ -123,23 +120,17 @@ def handle_too_many_attempts(request: Request, error: TooManyAttemptsError) -> J
 
 @app.exception_handler(InvalidTokenError)
 def handle_invalid_token(request: Request, error: InvalidTokenError) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(error)}
-    )
+    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content={"detail": str(error)})
 
 
 @app.exception_handler(NotFoundError)
 def handle_not_found(request: Request, error: NotFoundError) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(error)}
-    )
+    return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": str(error)})
 
 
 @app.exception_handler(ConflictError)
 def handle_conflict(request: Request, error: ConflictError) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_409_CONFLICT, content={"detail": str(error)}
-    )
+    return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(error)})
 
 
 @app.exception_handler(UnsupportedFileError)

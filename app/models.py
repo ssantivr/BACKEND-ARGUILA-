@@ -28,9 +28,7 @@ class User(Base):
     projects: Mapped[list["Project"]] = relationship(
         back_populates="owner", cascade="all, delete-orphan"
     )
-    sessions: Mapped[list["UserSession"]] = relationship(
-        cascade="all, delete-orphan"
-    )
+    sessions: Mapped[list["UserSession"]] = relationship(cascade="all, delete-orphan")
     password_reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
         cascade="all, delete-orphan"
     )
@@ -40,9 +38,7 @@ class UserSession(Base):
     __tablename__ = "user_sessions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column()
@@ -52,9 +48,7 @@ class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     expires_at: Mapped[datetime] = mapped_column()
@@ -69,18 +63,14 @@ class Project(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    owner_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(160))
     description: Mapped[str | None] = mapped_column(Text)
     location: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(20), server_default="draft")
     roof: Mapped[str] = mapped_column(String(10), server_default="gable")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(
-        server_default=func.now(), onupdate=func.now()
-    )
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     owner: Mapped[User] = relationship(back_populates="projects")
     terrains: Mapped[list["Terrain"]] = relationship(cascade="all, delete-orphan")
@@ -88,12 +78,8 @@ class Project(Base):
     plans: Mapped[list["Plan"]] = relationship(cascade="all, delete-orphan")
     elevations: Mapped[list["Elevation"]] = relationship(cascade="all, delete-orphan")
     materials: Mapped[list["Material"]] = relationship(cascade="all, delete-orphan")
-    recommendations: Mapped[list["Recommendation"]] = relationship(
-        cascade="all, delete-orphan"
-    )
-    conversations: Mapped[list["AIConversation"]] = relationship(
-        cascade="all, delete-orphan"
-    )
+    recommendations: Mapped[list["Recommendation"]] = relationship(cascade="all, delete-orphan")
+    conversations: Mapped[list["AIConversation"]] = relationship(cascade="all, delete-orphan")
 
 
 class Terrain(Base):
@@ -150,9 +136,7 @@ class File(Base):
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
-    uploaded_by: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL")
-    )
+    uploaded_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     filename: Mapped[str] = mapped_column(String(255))
     storage_path: Mapped[str] = mapped_column(String(500))
     mime_type: Mapped[str] = mapped_column(String(120))
@@ -160,9 +144,7 @@ class File(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
-SURFACE_CHECK = (
-    "surface IN ('concrete', 'brick', 'plaster', 'glass', 'steel', 'wood', 'stone')"
-)
+SURFACE_CHECK = "surface IN ('concrete', 'brick', 'plaster', 'glass', 'steel', 'wood', 'stone')"
 
 
 class Plan(Base):
@@ -173,9 +155,7 @@ class Plan(Base):
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
-    file_id: Mapped[int | None] = mapped_column(
-        ForeignKey("files.id", ondelete="SET NULL")
-    )
+    file_id: Mapped[int | None] = mapped_column(ForeignKey("files.id", ondelete="SET NULL"))
     title: Mapped[str] = mapped_column(String(160))
     level: Mapped[str | None] = mapped_column(String(60))
     scale: Mapped[str | None] = mapped_column(String(20))
@@ -183,9 +163,7 @@ class Plan(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     rooms: Mapped[list["Room"]] = relationship(cascade="all, delete-orphan")
-    components: Mapped[list["StructuralComponent"]] = relationship(
-        cascade="all, delete-orphan"
-    )
+    components: Mapped[list["StructuralComponent"]] = relationship(cascade="all, delete-orphan")
 
 
 class Room(Base):
@@ -201,9 +179,7 @@ class Room(Base):
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
-    plan_id: Mapped[int] = mapped_column(
-        ForeignKey("plans.id", ondelete="CASCADE"), index=True
-    )
+    plan_id: Mapped[int] = mapped_column(ForeignKey("plans.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(160))
     x_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
     y_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
@@ -228,9 +204,7 @@ class StructuralComponent(Base):
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
-    plan_id: Mapped[int] = mapped_column(
-        ForeignKey("plans.id", ondelete="CASCADE"), index=True
-    )
+    plan_id: Mapped[int] = mapped_column(ForeignKey("plans.id", ondelete="CASCADE"), index=True)
     kind: Mapped[str] = mapped_column(String(10))
     name: Mapped[str] = mapped_column(String(160))
     x_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
@@ -244,17 +218,13 @@ class StructuralComponent(Base):
 
 class Elevation(Base):
     __tablename__ = "elevations"
-    __table_args__ = (
-        CheckConstraint("orientation IN ('north', 'south', 'east', 'west')"),
-    )
+    __table_args__ = (CheckConstraint("orientation IN ('north', 'south', 'east', 'west')"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
-    file_id: Mapped[int | None] = mapped_column(
-        ForeignKey("files.id", ondelete="SET NULL")
-    )
+    file_id: Mapped[int | None] = mapped_column(ForeignKey("files.id", ondelete="SET NULL"))
     title: Mapped[str] = mapped_column(String(160))
     orientation: Mapped[str] = mapped_column(String(10))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
