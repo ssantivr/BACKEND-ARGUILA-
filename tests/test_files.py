@@ -168,3 +168,13 @@ def test_undo_restores_a_plan_without_a_file_deleted_in_between(client, project_
     [restored] = client.get(f"/projects/{project_id}/plans").json()
     assert restored["title"] == "Ground floor"
     assert restored["file_id"] is None
+
+
+def test_content_missing_from_disk_is_not_found(client, project_id, tmp_path):
+    file_id = upload(client, project_id).json()["id"]
+
+    for path in stored_files(tmp_path):
+        path.unlink()
+
+    assert client.get(f"/files/{file_id}").status_code == 200
+    assert client.get(f"/files/{file_id}/content").status_code == 404

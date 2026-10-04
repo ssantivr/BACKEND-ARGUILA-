@@ -279,3 +279,43 @@ def test_dynamic_array_rejects_invalid_indexes():
 
     with pytest.raises(IndexError):
         array.insert_at(2, 0)
+
+
+def test_stack_and_queue_report_their_capacity():
+    assert Stack(capacity=4).capacity == 4
+    assert Queue(capacity=6).capacity == 6
+
+
+def test_queue_clear_empties_it_and_keeps_it_usable():
+    queue: Queue[int] = Queue(capacity=2)
+    queue.enqueue(1)
+    queue.dequeue()
+    queue.enqueue(2)
+    queue.enqueue(3)
+
+    queue.clear()
+
+    assert queue.is_empty()
+    assert len(queue) == 0
+    with pytest.raises(IndexError):
+        queue.peek()
+
+    queue.enqueue(5)
+    queue.enqueue(6)
+
+    assert queue.is_full()
+    assert [queue.dequeue(), queue.dequeue()] == [5, 6]
+
+
+@pytest.mark.parametrize("list_type", [SinglyLinkedList, DoublyLinkedList])
+def test_linked_list_inserts_far_from_both_ends(list_type):
+    items = list_type()
+
+    for value in (10, 20, 30, 40, 50):
+        items.push_back(value)
+
+    items.insert_at(3, 35)
+    items.insert_at(2, 25)
+
+    assert list(items) == [10, 20, 25, 30, 35, 40, 50]
+    assert len(items) == 7
