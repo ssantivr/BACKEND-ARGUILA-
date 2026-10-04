@@ -67,6 +67,16 @@ class ProjectRead(BaseModel):
     updated_at: datetime
 
 
+class TemplateRead(BaseModel):
+    id: str
+    name: str
+    kind: str
+    description: str
+    levels: int
+    lot_area_m2: float
+    built_area_m2: float
+
+
 class TerrainPointData(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

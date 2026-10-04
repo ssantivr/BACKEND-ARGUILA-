@@ -17,6 +17,7 @@ from app.api import (
     rooms,
     structure,
     summary,
+    templates,
     terrains,
     undo,
 )
@@ -52,6 +53,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(files.router)
 app.include_router(projects.router)
+app.include_router(templates.router)
 app.include_router(terrains.router)
 app.include_router(materials.router)
 app.include_router(plans.router)
