@@ -34,6 +34,15 @@ def setback_for(width: float, length: float) -> float:
     return min(DEFAULT_SETBACK_M, min(width, length) / 4)
 
 
+def has_numeric_level(plan: Plan) -> bool:
+    try:
+        float(plan.level or "")
+    except ValueError:
+        return False
+
+    return True
+
+
 def build_volume(plan: Plan, lot: Lot, base: float) -> StructureRoom:
     origin_x, width, length = lot
     setback = setback_for(width, length)
@@ -137,6 +146,9 @@ class StructureService(ProjectScopedService):
         for plan in self.plans.list_by_project(project_id):
             own = rooms_by_plan.get(plan.id, [])
             height = STOREY_HEIGHT_M
+
+            if not own and not has_numeric_level(plan):
+                continue
 
             if own:
                 stacked.extend(build_room(plan, room, base) for room in own)

@@ -47,7 +47,9 @@ def test_structure_stacks_one_storey_per_plan_inside_the_setback(client, project
     ground = client.post(
         f"/projects/{project_id}/plans", json={"title": "Ground floor", "level": "0"}
     ).json()
-    upper = client.post(f"/projects/{project_id}/plans", json={"title": "Upper floor"}).json()
+    upper = client.post(
+        f"/projects/{project_id}/plans", json={"title": "Upper floor", "level": "1"}
+    ).json()
 
     body = structure(client, project_id).json()
 
@@ -84,7 +86,7 @@ def test_structure_stacks_one_storey_per_plan_inside_the_setback(client, project
             "plan_id": upper["id"],
             "plan_title": "Upper floor",
             "name": "Upper floor",
-            "level": None,
+            "level": "1",
             "x_m": 10,
             "y_m": 15,
             "base_m": 3,
@@ -100,7 +102,7 @@ def test_structure_shrinks_the_setback_on_a_narrow_lot(client, project_id):
         f"/projects/{project_id}/terrains",
         json={"name": "Narrow", "area_m2": 80, "width_m": 4, "length_m": 20},
     )
-    client.post(f"/projects/{project_id}/plans", json={"title": "Ground floor"})
+    client.post(f"/projects/{project_id}/plans", json={"title": "Ground floor", "level": "0"})
 
     room = structure(client, project_id).json()["rooms"][0]
 
@@ -120,7 +122,7 @@ def test_structure_places_terrains_side_by_side_and_builds_on_the_rectangular_on
         f"/projects/{project_id}/terrains",
         json={"name": "Lot", "area_m2": 400, "width_m": 20, "length_m": 20},
     )
-    client.post(f"/projects/{project_id}/plans", json={"title": "Ground floor"})
+    client.post(f"/projects/{project_id}/plans", json={"title": "Ground floor", "level": "0"})
 
     body = structure(client, project_id).json()
 
@@ -140,7 +142,9 @@ def test_structure_uses_the_rooms_of_a_plan_instead_of_its_volume(client, projec
         json={"name": "Lot", "area_m2": 600, "width_m": 20, "length_m": 30},
     )
     ground = client.post(f"/projects/{project_id}/plans", json={"title": "Ground"}).json()
-    upper = client.post(f"/projects/{project_id}/plans", json={"title": "Upper"}).json()
+    upper = client.post(
+        f"/projects/{project_id}/plans", json={"title": "Upper", "level": "1"}
+    ).json()
     room = {"plan_id": ground["id"], "x_m": 3, "y_m": 4, "width_m": 5, "depth_m": 6}
     kitchen = client.post(
         f"/projects/{project_id}/rooms", json={**room, "name": "Kitchen", "height_m": 4}
@@ -169,6 +173,29 @@ def test_structure_uses_the_rooms_of_a_plan_instead_of_its_volume(client, projec
         "height_m": 4,
     }
     assert rooms[2]["plan_id"] == upper["id"]
+
+
+def test_structure_skips_plans_that_are_not_a_floor(client, project_id):
+    client.post(
+        f"/projects/{project_id}/terrains",
+        json={"name": "Lot", "area_m2": 600, "width_m": 20, "length_m": 30},
+    )
+    for title, level in [
+        ("Ground", "0"),
+        ("Site plan", "Terreno"),
+        ("Details", None),
+        ("Mezzanine", "0.5"),
+        ("Basement", "-1"),
+    ]:
+        client.post(f"/projects/{project_id}/plans", json={"title": title, "level": level})
+
+    rooms = structure(client, project_id).json()["rooms"]
+
+    assert [(room["name"], room["base_m"]) for room in rooms] == [
+        ("Ground", 0),
+        ("Mezzanine", 3),
+        ("Basement", 6),
+    ]
 
 
 def test_structure_shows_rooms_without_any_terrain(client, project_id):
