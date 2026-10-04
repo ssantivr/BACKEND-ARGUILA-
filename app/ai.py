@@ -1,14 +1,19 @@
 import os
+import re
 from functools import lru_cache
 from typing import Protocol
 
 import anthropic
+import httpx
 
 from app.errors import AIUnavailableError
 
 MODEL = "claude-opus-5-5"
 MAX_OUTPUT_TOKENS = 16000
 REQUEST_TIMEOUT_SECONDS = 120.0
+CONNECT_TIMEOUT_SECONDS = 1.0
+DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434"
+THINKING_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL)
 
 REFUSAL_REPLY = "No puedo ayudar con esa solicitud."
 EMPTY_REPLY = "No se obtuvo una respuesta. Intenta reformular la pregunta."
@@ -56,20 +61,72 @@ class ClaudeAssistant:
         return text or EMPTY_REPLY
 
 
+class OllamaAssistant:
+    def __init__(self, client: httpx.Client | None = None) -> None:
+        self._client = client or httpx.Client(
+            timeout=httpx.Timeout(REQUEST_TIMEOUT_SECONDS, connect=CONNECT_TIMEOUT_SECONDS)
+        )
+
+    def reply(self, system: str, messages: list[dict[str, str]]) -> str:
+        base_url = os.environ.get("OLLAMA_URL", DEFAULT_OLLAMA_URL).rstrip("/")
+
+        try:
+            response = self._client.post(
+                f"{base_url}/api/chat",
+                json={
+                    "model": self._model(base_url),
+                    "messages": [{"role": "system", "content": system}, *messages],
+                    "stream": False,
+                },
+            )
+            response.raise_for_status()
+            content = response.json()["message"]["content"]
+        except httpx.HTTPStatusError as error:
+            raise AIUnavailableError(
+                f"Local AI request failed (status {error.response.status_code})"
+            ) from None
+        except httpx.HTTPError:
+            raise AIUnavailableError(
+                "Could not reach the local AI: start Ollama or set ANTHROPIC_API_KEY"
+            ) from None
+        except (KeyError, TypeError, ValueError):
+            raise AIUnavailableError("Local AI returned an unexpected answer") from None
+
+        return THINKING_BLOCK.sub("", content).strip() or EMPTY_REPLY
+
+    def _model(self, base_url: str) -> str:
+        configured = os.environ.get("OLLAMA_MODEL")
+
+        if configured:
+            return configured
+
+        response = self._client.get(f"{base_url}/api/tags")
+        response.raise_for_status()
+        models = response.json()["models"]
+
+        if not models:
+            raise AIUnavailableError(
+                "Local AI has no models: download one with 'ollama pull'"
+            )
+
+        return models[0]["name"]
+
+
 @lru_cache
 def _client() -> ClaudeAssistant:
     return ClaudeAssistant()
 
 
-def get_assistant() -> Assistant:
-    if not (
-        os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
-    ):
-        raise AIUnavailableError(
-            "AI assistant is not configured: set ANTHROPIC_API_KEY on the server"
-        )
+@lru_cache
+def _local_client() -> OllamaAssistant:
+    return OllamaAssistant()
 
-    return _client()
+
+def get_assistant() -> Assistant:
+    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        return _client()
+
+    return _local_client()
 
 
 def get_optional_assistant() -> Assistant | None:

@@ -1,3 +1,4 @@
+import json
 from types import SimpleNamespace
 
 import anthropic
@@ -145,3 +146,75 @@ def test_claude_assistant_turns_sdk_errors_into_the_application_error():
 
         with pytest.raises(AIUnavailableError):
             assistant.reply("s", [])
+
+
+def ollama_assistant(handler):
+    return ai.OllamaAssistant(httpx.Client(transport=httpx.MockTransport(handler)))
+
+
+def test_ollama_assistant_sends_the_chat_to_the_first_installed_model(monkeypatch):
+    monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+    monkeypatch.setenv("OLLAMA_URL", "http://ollama.test/")
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": [{"name": "llama3.2"}, {"name": "other"}]})
+
+        return httpx.Response(200, json={"message": {"content": "<think>plan</think> Hola."}})
+
+    reply = ollama_assistant(handler).reply("system prompt", [{"role": "user", "content": "hola"}])
+
+    assert reply == "Hola."
+    assert [str(request.url) for request in requests] == [
+        "http://ollama.test/api/tags",
+        "http://ollama.test/api/chat",
+    ]
+    assert json.loads(requests[1].content) == {
+        "model": "llama3.2",
+        "messages": [
+            {"role": "system", "content": "system prompt"},
+            {"role": "user", "content": "hola"},
+        ],
+        "stream": False,
+    }
+
+
+def test_ollama_assistant_uses_the_configured_model(monkeypatch):
+    monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5")
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"message": {"content": "  "}})
+
+    assert ollama_assistant(handler).reply("s", []) == ai.EMPTY_REPLY
+    assert len(requests) == 1
+    assert json.loads(requests[0].content)["model"] == "qwen2.5"
+
+
+def test_ollama_assistant_turns_failures_into_the_application_error(monkeypatch):
+    monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+
+    def unreachable(request):
+        raise httpx.ConnectError("refused", request=request)
+
+    handlers = [
+        unreachable,
+        lambda request: httpx.Response(200, json={"models": []}),
+        lambda request: httpx.Response(500),
+        lambda request: httpx.Response(200, json={"models": [{"name": "m"}], "unexpected": True}),
+    ]
+
+    for handler in handlers:
+        with pytest.raises(AIUnavailableError):
+            ollama_assistant(handler).reply("s", [])
+
+
+def test_local_assistant_is_chosen_without_an_api_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+
+    assert isinstance(ai.get_assistant(), ai.OllamaAssistant)

@@ -46,6 +46,7 @@ def create_test_engine() -> Engine:
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("UPLOAD_DIR", str(tmp_path / "uploads"))
+    monkeypatch.setenv("OLLAMA_URL", "http://127.0.0.1:9")
 
     engine = create_test_engine()
 
