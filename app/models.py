@@ -174,6 +174,9 @@ class Plan(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     rooms: Mapped[list["Room"]] = relationship(cascade="all, delete-orphan")
+    components: Mapped[list["StructuralComponent"]] = relationship(
+        cascade="all, delete-orphan"
+    )
 
 
 class Room(Base):
@@ -191,6 +194,32 @@ class Room(Base):
     plan_id: Mapped[int] = mapped_column(
         ForeignKey("plans.id", ondelete="CASCADE"), index=True
     )
+    name: Mapped[str] = mapped_column(String(160))
+    x_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    y_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    width_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
+    depth_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
+    height_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class StructuralComponent(Base):
+    __tablename__ = "structural_components"
+    __table_args__ = (
+        CheckConstraint("kind IN ('column', 'beam', 'wall')"),
+        CheckConstraint("width_m > 0"),
+        CheckConstraint("depth_m > 0"),
+        CheckConstraint("height_m > 0"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    plan_id: Mapped[int] = mapped_column(
+        ForeignKey("plans.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(10))
     name: Mapped[str] = mapped_column(String(160))
     x_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
     y_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))

@@ -8,6 +8,7 @@ from app.services.geometry import polygon_area
 ProjectStatus = Literal["draft", "active", "archived"]
 Orientation = Literal["north", "south", "east", "west"]
 RecommendationSource = Literal["ai", "user", "system"]
+ComponentKind = Literal["column", "beam", "wall"]
 
 
 class RegisterRequest(BaseModel):
@@ -262,10 +263,64 @@ class StructureRoom(BaseModel):
     height_m: float
 
 
+class ComponentCreate(BaseModel):
+    plan_id: int
+    kind: ComponentKind
+    name: str = Field(min_length=1, max_length=160)
+    x_m: float = Field(ge=-100000, le=100000)
+    y_m: float = Field(ge=-100000, le=100000)
+    width_m: float = Field(gt=0, lt=1000)
+    depth_m: float = Field(gt=0, lt=1000)
+    height_m: float = Field(gt=0, lt=1000)
+
+
+class ComponentUpdate(BaseModel):
+    plan_id: int | None = None
+    kind: ComponentKind | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=160)
+    x_m: float | None = Field(default=None, ge=-100000, le=100000)
+    y_m: float | None = Field(default=None, ge=-100000, le=100000)
+    width_m: float | None = Field(default=None, gt=0, lt=1000)
+    depth_m: float | None = Field(default=None, gt=0, lt=1000)
+    height_m: float | None = Field(default=None, gt=0, lt=1000)
+
+
+class ComponentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    plan_id: int
+    kind: ComponentKind
+    name: str
+    x_m: float
+    y_m: float
+    width_m: float
+    depth_m: float
+    height_m: float
+    created_at: datetime
+
+
+class StructureComponent(BaseModel):
+    kind: ComponentKind
+    id: int
+    plan_id: int
+    plan_title: str
+    name: str
+    level: str | None
+    x_m: float
+    y_m: float
+    base_m: float
+    width_m: float
+    depth_m: float
+    height_m: float
+
+
 class StructureRead(BaseModel):
     project_id: int
     terrains: list[StructureTerrain]
     rooms: list[StructureRoom]
+    components: list[StructureComponent]
 
 
 class DeletedItemRead(BaseModel):

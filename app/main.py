@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.api import (
     auth,
+    components,
     conversations,
     elevations,
     files,
@@ -56,6 +57,7 @@ app.include_router(materials.router)
 app.include_router(plans.router)
 app.include_router(elevations.router)
 app.include_router(rooms.router)
+app.include_router(components.router)
 app.include_router(structure.router)
 app.include_router(recommendations.router)
 app.include_router(undo.router)

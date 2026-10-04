@@ -36,6 +36,7 @@ def test_structure_is_empty_without_terrains(client, project_id):
         "project_id": project_id,
         "terrains": [],
         "rooms": [],
+        "components": [],
     }
 
 
@@ -196,6 +197,69 @@ def test_structure_skips_plans_that_are_not_a_floor(client, project_id):
         ("Mezzanine", 3),
         ("Basement", 6),
     ]
+
+
+def test_structure_places_components_on_their_level(client, project_id):
+    client.post(
+        f"/projects/{project_id}/terrains",
+        json={"name": "Lot", "area_m2": 600, "width_m": 20, "length_m": 30},
+    )
+    ground = client.post(f"/projects/{project_id}/plans", json={"title": "Ground"}).json()
+    client.post(f"/projects/{project_id}/plans", json={"title": "Upper", "level": "1"})
+    base = {"plan_id": ground["id"], "x_m": 2, "y_m": 4}
+    column = client.post(
+        f"/projects/{project_id}/components",
+        json={**base, "kind": "column", "name": "C1", "width_m": 0.4, "depth_m": 0.4, "height_m": 3.5},
+    ).json()
+    client.post(
+        f"/projects/{project_id}/components",
+        json={**base, "kind": "beam", "name": "V1", "width_m": 6, "depth_m": 0.3, "height_m": 0.5},
+    )
+
+    body = structure(client, project_id).json()
+
+    assert body["components"][0] == {
+        "kind": "column",
+        "id": column["id"],
+        "plan_id": ground["id"],
+        "plan_title": "Ground",
+        "name": "C1",
+        "level": None,
+        "x_m": 2.2,
+        "y_m": 4.2,
+        "base_m": 0,
+        "width_m": 0.4,
+        "depth_m": 0.4,
+        "height_m": 3.5,
+    }
+    assert [(item["name"], item["base_m"]) for item in body["components"]] == [
+        ("C1", 0),
+        ("V1", 3),
+    ]
+    assert [(room["kind"], room["name"], room["base_m"]) for room in body["rooms"]] == [
+        ("volume", "Upper", 3.5)
+    ]
+
+
+def test_structure_hangs_a_lone_beam_from_the_default_storey_height(client, project_id):
+    plan = client.post(f"/projects/{project_id}/plans", json={"title": "Ground"}).json()
+    client.post(
+        f"/projects/{project_id}/components",
+        json={
+            "plan_id": plan["id"],
+            "kind": "beam",
+            "name": "V1",
+            "x_m": 0,
+            "y_m": 0,
+            "width_m": 5,
+            "depth_m": 0.3,
+            "height_m": 0.4,
+        },
+    )
+
+    component = structure(client, project_id).json()["components"][0]
+
+    assert component["base_m"] == 2.6
 
 
 def test_structure_shows_rooms_without_any_terrain(client, project_id):

@@ -1,10 +1,17 @@
 from sqlalchemy.orm import Session
 
-from app.models import Plan, Room, Terrain, User
+from app.models import Plan, Room, StructuralComponent, Terrain, User
+from app.repositories.component_repository import ComponentRepository
 from app.repositories.plan_repository import PlanRepository
 from app.repositories.room_repository import RoomRepository
 from app.repositories.terrain_repository import TerrainRepository
-from app.schemas import StructureRead, StructureRoom, StructureTerrain, TerrainPointData
+from app.schemas import (
+    StructureComponent,
+    StructureRead,
+    StructureRoom,
+    StructureTerrain,
+    TerrainPointData,
+)
 from app.services.base import ProjectScopedService
 
 STOREY_HEIGHT_M = 3.0
@@ -82,22 +89,65 @@ def build_room(plan: Plan, room: Room, base: float) -> StructureRoom:
     )
 
 
+def build_component(
+    plan: Plan, component: StructuralComponent, base: float, level_height: float
+) -> StructureComponent:
+    width, depth, height = (
+        float(component.width_m),
+        float(component.depth_m),
+        float(component.height_m),
+    )
+    hangs = component.kind == "beam"
+
+    return StructureComponent(
+        kind=component.kind,
+        id=component.id,
+        plan_id=plan.id,
+        plan_title=plan.title,
+        name=component.name,
+        level=plan.level,
+        x_m=float(component.x_m) + width / 2,
+        y_m=float(component.y_m) + depth / 2,
+        base_m=base + max(level_height - height, 0) if hangs else base,
+        width_m=width,
+        depth_m=depth,
+        height_m=height,
+    )
+
+
+def level_height(rooms: list[Room], components: list[StructuralComponent]) -> float:
+    heights = [float(room.height_m) for room in rooms] + [
+        float(component.height_m) for component in components if component.kind != "beam"
+    ]
+
+    return max(heights, default=STOREY_HEIGHT_M)
+
+
+def group_by_plan(items: list) -> dict[int, list]:
+    grouped: dict[int, list] = {}
+
+    for item in items:
+        grouped.setdefault(item.plan_id, []).append(item)
+
+    return grouped
+
+
 class StructureService(ProjectScopedService):
     def __init__(self, session: Session, user: User) -> None:
         super().__init__(session, user)
         self.terrains = TerrainRepository(session)
         self.plans = PlanRepository(session)
         self.rooms = RoomRepository(session)
+        self.components = ComponentRepository(session)
 
     def build(self, project_id: int) -> StructureRead:
         self._ensure_project_exists(project_id)
 
         terrains, lot = self._place_terrains(project_id)
+        rooms, components = self._stack_levels(project_id, lot)
 
         return StructureRead(
-            project_id=project_id,
-            terrains=terrains,
-            rooms=self._stack_levels(project_id, lot),
+            project_id=project_id, terrains=terrains, rooms=rooms, components=components
         )
 
     def _place_terrains(self, project_id: int) -> tuple[list[StructureTerrain], Lot | None]:
@@ -134,28 +184,32 @@ class StructureService(ProjectScopedService):
 
         return placed, lot
 
-    def _stack_levels(self, project_id: int, lot: Lot | None) -> list[StructureRoom]:
-        rooms_by_plan: dict[int, list[Room]] = {}
+    def _stack_levels(
+        self, project_id: int, lot: Lot | None
+    ) -> tuple[list[StructureRoom], list[StructureComponent]]:
+        rooms_by_plan = group_by_plan(self.rooms.list_by_project(project_id))
+        components_by_plan = group_by_plan(self.components.list_by_project(project_id))
 
-        for room in self.rooms.list_by_project(project_id):
-            rooms_by_plan.setdefault(room.plan_id, []).append(room)
-
-        stacked: list[StructureRoom] = []
+        rooms: list[StructureRoom] = []
+        components: list[StructureComponent] = []
         base = 0.0
 
         for plan in self.plans.list_by_project(project_id):
-            own = rooms_by_plan.get(plan.id, [])
-            height = STOREY_HEIGHT_M
+            own_rooms = rooms_by_plan.get(plan.id, [])
+            own_components = components_by_plan.get(plan.id, [])
 
-            if not own and not has_numeric_level(plan):
+            if not own_rooms and not own_components and not has_numeric_level(plan):
                 continue
 
-            if own:
-                stacked.extend(build_room(plan, room, base) for room in own)
-                height = max(float(room.height_m) for room in own)
-            elif lot is not None:
-                stacked.append(build_volume(plan, lot, base))
+            height = level_height(own_rooms, own_components)
+            rooms.extend(build_room(plan, room, base) for room in own_rooms)
+            components.extend(
+                build_component(plan, component, base, height) for component in own_components
+            )
+
+            if not own_rooms and not own_components and lot is not None:
+                rooms.append(build_volume(plan, lot, base))
 
             base += height
 
-        return stacked
+        return rooms, components
