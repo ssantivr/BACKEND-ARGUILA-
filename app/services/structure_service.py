@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.errors import NotFoundError
-from app.models import Plan, Room, StructuralComponent, Terrain, User
+from app.models import Plan, Project, Room, StructuralComponent, Terrain, User
 from app.repositories.component_repository import ComponentRepository
 from app.repositories.plan_repository import PlanRepository
 from app.repositories.room_repository import RoomRepository
@@ -145,14 +145,23 @@ class StructureService(ProjectScopedService):
         self.components = ComponentRepository(session)
 
     def build(self, project_id: int) -> StructureRead:
-        self._ensure_project_exists(project_id)
+        project = self._project(project_id)
 
         terrains, lot = self._place_terrains(project_id)
         rooms, components = self._stack_levels(project_id, lot)
 
         return StructureRead(
-            project_id=project_id, terrains=terrains, rooms=rooms, components=components
+            project_id=project_id,
+            roof=project.roof,
+            terrains=terrains,
+            rooms=rooms,
+            components=components,
         )
+
+    def set_roof(self, project_id: int, roof: str) -> None:
+        project = self._project(project_id)
+        project.roof = roof
+        self.projects.save(project)
 
     def set_surface(self, project_id: int, kind: str, element_id: int, surface: str) -> None:
         self._ensure_project_exists(project_id)
@@ -172,6 +181,14 @@ class StructureService(ProjectScopedService):
 
         element.surface = surface
         repository.save(element)
+
+    def _project(self, project_id: int) -> Project:
+        project = self.projects.get_owned(project_id, self.user.id)
+
+        if project is None:
+            raise NotFoundError("Project not found")
+
+        return project
 
     def _place_terrains(self, project_id: int) -> tuple[list[StructureTerrain], Lot | None]:
         placed: list[StructureTerrain] = []

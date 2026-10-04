@@ -11,6 +11,7 @@ RecommendationSource = Literal["ai", "user", "system"]
 RecommendationPriority = Literal["high", "medium", "low"]
 ComponentKind = Literal["column", "beam", "wall"]
 ElementKind = Literal["room", "volume", "column", "beam", "wall"]
+RoofKind = Literal["gable", "flat"]
 SurfaceMaterial = Literal["concrete", "brick", "plaster", "glass", "steel", "wood", "stone"]
 
 
@@ -335,8 +336,13 @@ class SurfaceUpdate(BaseModel):
     surface: SurfaceMaterial
 
 
+class RoofUpdate(BaseModel):
+    roof: RoofKind
+
+
 class StructureRead(BaseModel):
     project_id: int
+    roof: RoofKind
     terrains: list[StructureTerrain]
     rooms: list[StructureRoom]
     components: list[StructureComponent]

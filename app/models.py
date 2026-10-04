@@ -65,6 +65,7 @@ class Project(Base):
     __table_args__ = (
         UniqueConstraint("owner_id", "name"),
         CheckConstraint("status IN ('draft', 'active', 'archived')"),
+        CheckConstraint("roof IN ('gable', 'flat')"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -75,6 +76,7 @@ class Project(Base):
     description: Mapped[str | None] = mapped_column(Text)
     location: Mapped[str | None] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(20), server_default="draft")
+    roof: Mapped[str] = mapped_column(String(10), server_default="gable")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         server_default=func.now(), onupdate=func.now()

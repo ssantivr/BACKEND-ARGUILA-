@@ -34,6 +34,7 @@ def test_structure_is_empty_without_terrains(client, project_id):
 
     assert structure(client, project_id).json() == {
         "project_id": project_id,
+        "roof": "gable",
         "terrains": [],
         "rooms": [],
         "components": [],
@@ -403,3 +404,27 @@ def test_surface_is_hidden_from_other_users(client, project_id, modelled):
 
     assert other.patch(url, json={"surface": "glass"}).status_code == 404
     assert TestClient(app).patch(url, json={"surface": "glass"}).status_code == 401
+
+
+def test_roof_is_gable_until_it_is_changed(client, project_id):
+    url = f"/projects/{project_id}/structure/roof"
+
+    assert structure(client, project_id).json()["roof"] == "gable"
+    assert client.patch(url, json={"roof": "flat"}).status_code == 204
+    assert structure(client, project_id).json()["roof"] == "flat"
+
+
+def test_roof_rejects_an_unknown_kind(client, project_id):
+    response = client.patch(f"/projects/{project_id}/structure/roof", json={"roof": "dome"})
+
+    assert response.status_code == 422
+
+
+def test_roof_is_hidden_from_other_users(client, project_id):
+    other = TestClient(app)
+    register(other, name="Eve", email="eve@example.com")
+    url = f"/projects/{project_id}/structure/roof"
+
+    assert other.patch(url, json={"roof": "flat"}).status_code == 404
+    assert TestClient(app).patch(url, json={"roof": "flat"}).status_code == 401
+    assert structure(client, project_id).json()["roof"] == "gable"
