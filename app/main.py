@@ -1,4 +1,7 @@
+import os
+
 from fastapi import FastAPI, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api import (
@@ -10,6 +13,8 @@ from app.api import (
     plans,
     projects,
     recommendations,
+    rooms,
+    structure,
     summary,
     terrains,
     undo,
@@ -24,7 +29,24 @@ from app.errors import (
     UnsupportedFileError,
 )
 
+DEFAULT_APP_URL = "http://localhost:5173"
+
+
+def allowed_origins() -> list[str]:
+    configured = os.environ.get("CORS_ORIGINS") or os.environ.get("APP_URL", DEFAULT_APP_URL)
+
+    return [origin.strip().rstrip("/") for origin in configured.split(",") if origin.strip()]
+
+
 app = FastAPI(title="ARQUILA API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins(),
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Content-Type"],
+)
 
 app.include_router(auth.router)
 app.include_router(files.router)
@@ -33,6 +55,8 @@ app.include_router(terrains.router)
 app.include_router(materials.router)
 app.include_router(plans.router)
 app.include_router(elevations.router)
+app.include_router(rooms.router)
+app.include_router(structure.router)
 app.include_router(recommendations.router)
 app.include_router(undo.router)
 app.include_router(conversations.router)
