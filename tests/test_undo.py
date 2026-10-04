@@ -114,6 +114,58 @@ def test_history_is_separate_per_project_and_dropped_with_the_project(client, pr
     assert history(client, recreated["id"]) == []
 
 
+def redo(client, project_id):
+    return client.post(f"/projects/{project_id}/redo")
+
+
+def test_redo_deletes_again_what_undo_restored(client, project_id):
+    material = add_material(client, project_id)
+    client.delete(f"/materials/{material['id']}")
+    undo(client, project_id)
+
+    response = redo(client, project_id)
+
+    assert response.status_code == 200
+    assert response.json() == {"kind": "material", "label": "Concrete"}
+    assert client.get(f"/projects/{project_id}/materials").json() == []
+    assert history(client, project_id) == [{"kind": "material", "label": "Concrete"}]
+
+    assert undo(client, project_id).status_code == 200
+    assert len(client.get(f"/projects/{project_id}/materials").json()) == 1
+
+
+def test_redo_is_last_in_first_out(client, project_id):
+    first = add_material(client, project_id, "Concrete")
+    second = add_material(client, project_id, "Steel")
+    client.delete(f"/materials/{first['id']}")
+    client.delete(f"/materials/{second['id']}")
+
+    assert undo(client, project_id).json()["label"] == "Steel"
+    assert undo(client, project_id).json()["label"] == "Concrete"
+
+    assert redo(client, project_id).json()["label"] == "Concrete"
+    assert redo(client, project_id).json()["label"] == "Steel"
+    assert redo(client, project_id).status_code == 404
+
+
+def test_redo_with_nothing_restored_returns_404(client, project_id):
+    assert redo(client, project_id).status_code == 404
+    assert redo(client, 999).status_code == 404
+
+
+def test_a_new_deletion_discards_what_could_be_redone(client, project_id):
+    first = add_material(client, project_id, "Concrete")
+    second = add_material(client, project_id, "Steel")
+    client.delete(f"/materials/{first['id']}")
+    undo(client, project_id)
+
+    client.delete(f"/materials/{second['id']}")
+
+    assert redo(client, project_id).status_code == 404
+    names = [m["name"] for m in client.get(f"/projects/{project_id}/materials").json()]
+    assert names == ["Concrete"]
+
+
 def record(project_id: int, label: str) -> DeletedRecord:
     return DeletedRecord(project_id, "material", label, object, {})
 

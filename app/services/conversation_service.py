@@ -12,6 +12,8 @@ from app.repositories.material_repository import MaterialRepository
 from app.repositories.terrain_repository import TerrainRepository
 from app.services import assistant_rules
 from app.services.base import ProjectScopedService
+from app.services.conversation_context import build_context
+from app.services.material_ranking import rank_by_cost
 
 TITLE_LENGTH = 60
 
@@ -106,15 +108,10 @@ class ConversationService(ProjectScopedService):
         assistant: Assistant | None,
     ) -> tuple[str, str]:
         if assistant is not None:
-            history = [
-                {"role": message.role, "content": message.content}
-                for message in conversation.messages
-            ]
-
             try:
                 reply = assistant.reply(
                     SYSTEM_PROMPT.format(project_data=self._project_data(project)),
-                    [*history, {"role": "user", "content": content}],
+                    build_context(conversation.messages, content),
                 )
             except AIUnavailableError:
                 pass
@@ -134,11 +131,7 @@ class ConversationService(ProjectScopedService):
         self.conversations.delete(self.get(conversation_id))
 
     def _project_data(self, project: Project) -> str:
-        materials = sorted(
-            self.materials.list_by_project(project.id),
-            key=lambda material: material.quantity * material.unit_cost,
-            reverse=True,
-        )
+        materials = rank_by_cost(self.materials.list_by_project(project.id))
 
         data = {
             "name": project.name,

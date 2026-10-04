@@ -6,7 +6,12 @@ from sqlalchemy.orm import Session
 from app.errors import ConflictError, NotFoundError
 from app.models import File
 from app.services.base import ProjectScopedService
-from app.services.undo_history import DeletedRecord, undo_history
+from app.services.undo_history import (
+    DeletedRecord,
+    RestoredRecord,
+    snapshot,
+    undo_history,
+)
 
 
 class UndoService(ProjectScopedService):
@@ -30,14 +35,39 @@ class UndoService(ProjectScopedService):
         ):
             values["file_id"] = None
 
+        instance = deleted.model(**values)
+
         try:
-            self.session.add(deleted.model(**values))
+            self.session.add(instance)
             self.session.commit()
         except IntegrityError:
             self.session.rollback()
-            undo_history.record(deleted)
+            undo_history.record(deleted, keep_redo=True)
             raise ConflictError(
                 f'Cannot restore "{deleted.label}": it conflicts with existing data'
             ) from None
+
+        undo_history.record_restored(RestoredRecord(deleted, instance.id))
+
+        return deleted
+
+    def redo_last(self, project_id: int) -> DeletedRecord:
+        self._ensure_project_exists(project_id)
+
+        restored = undo_history.pop_restored(project_id)
+
+        if restored is None:
+            raise NotFoundError("Nothing to redo")
+
+        instance = self.session.get(restored.deleted.model, restored.restored_id)
+
+        if instance is None:
+            raise NotFoundError("Nothing to redo")
+
+        label = getattr(instance, "name", None) or getattr(instance, "title")
+        deleted = snapshot(restored.deleted.kind, label, instance)
+        self.session.delete(instance)
+        self.session.commit()
+        undo_history.record(deleted, keep_redo=True)
 
         return deleted

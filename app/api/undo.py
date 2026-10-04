@@ -27,3 +27,8 @@ def list_undoable_deletions(
 @router.post("/projects/{project_id}/undo", response_model=DeletedItemRead)
 def undo_last_deletion(project_id: int, service: UndoService = Depends(get_service)):
     return service.undo_last(project_id)
+
+
+@router.post("/projects/{project_id}/redo", response_model=DeletedItemRead)
+def redo_last_restoration(project_id: int, service: UndoService = Depends(get_service)):
+    return service.redo_last(project_id)
