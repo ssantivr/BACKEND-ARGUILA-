@@ -244,7 +244,10 @@ class AIConversation(Base):
 
 class AIMessage(Base):
     __tablename__ = "ai_messages"
-    __table_args__ = (CheckConstraint("role IN ('user', 'assistant', 'system')"),)
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'assistant', 'system')"),
+        CheckConstraint("source IN ('ai', 'rules')"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     conversation_id: Mapped[int] = mapped_column(
@@ -252,4 +255,5 @@ class AIMessage(Base):
     )
     role: Mapped[str] = mapped_column(String(10))
     content: Mapped[str] = mapped_column(Text)
+    source: Mapped[str | None] = mapped_column(String(10))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

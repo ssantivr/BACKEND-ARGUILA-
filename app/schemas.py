@@ -264,6 +264,7 @@ class MessageRead(BaseModel):
     conversation_id: int
     role: Literal["user", "assistant", "system"]
     content: str
+    source: Literal["ai", "rules"] | None
     created_at: datetime
 
 

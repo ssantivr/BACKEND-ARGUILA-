@@ -15,7 +15,6 @@ from app.api import (
     undo,
 )
 from app.errors import (
-    AIUnavailableError,
     AuthenticationError,
     ConflictError,
     FileTooLargeError,
@@ -86,13 +85,6 @@ def handle_unsupported_file(request: Request, error: UnsupportedFileError) -> JS
 @app.exception_handler(FileTooLargeError)
 def handle_file_too_large(request: Request, error: FileTooLargeError) -> JSONResponse:
     return JSONResponse(status_code=413, content={"detail": str(error)})
-
-
-@app.exception_handler(AIUnavailableError)
-def handle_ai_unavailable(request: Request, error: AIUnavailableError) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(error)}
-    )
 
 
 @app.get("/health")

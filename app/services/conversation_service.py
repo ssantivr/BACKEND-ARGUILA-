@@ -4,12 +4,13 @@ import json
 
 from sqlalchemy.orm import Session
 
-from app.ai import AssistantClient
-from app.errors import NotFoundError
+from app.ai import Assistant
+from app.errors import AIUnavailableError, NotFoundError
 from app.models import AIConversation, AIMessage, Project, User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.material_repository import MaterialRepository
 from app.repositories.terrain_repository import TerrainRepository
+from app.services import assistant_rules
 from app.services.base import ProjectScopedService
 
 TITLE_LENGTH = 60
@@ -72,20 +73,13 @@ class ConversationService(ProjectScopedService):
         return conversation
 
     def send_message(
-        self, conversation_id: int, content: str, assistant: AssistantClient
+        self, conversation_id: int, content: str, assistant: Assistant | None
     ) -> list[AIMessage]:
         conversation = self.get(conversation_id)
         project = self.projects.get(conversation.project_id)
         assert project is not None
 
-        history = [
-            {"role": message.role, "content": message.content}
-            for message in conversation.messages
-        ]
-        reply = assistant.reply(
-            SYSTEM_PROMPT.format(project_data=self._project_data(project)),
-            [*history, {"role": "user", "content": content}],
-        )
+        reply, source = self._reply(project, conversation, content, assistant)
 
         if conversation.title is None:
             conversation.title = content[:TITLE_LENGTH]
@@ -94,10 +88,45 @@ class ConversationService(ProjectScopedService):
             [
                 AIMessage(conversation_id=conversation.id, role="user", content=content),
                 AIMessage(
-                    conversation_id=conversation.id, role="assistant", content=reply
+                    conversation_id=conversation.id,
+                    role="assistant",
+                    content=reply,
+                    source=source,
                 ),
             ]
         )
+
+    def _reply(
+        self,
+        project: Project,
+        conversation: AIConversation,
+        content: str,
+        assistant: Assistant | None,
+    ) -> tuple[str, str]:
+        if assistant is not None:
+            history = [
+                {"role": message.role, "content": message.content}
+                for message in conversation.messages
+            ]
+
+            try:
+                reply = assistant.reply(
+                    SYSTEM_PROMPT.format(project_data=self._project_data(project)),
+                    [*history, {"role": "user", "content": content}],
+                )
+            except AIUnavailableError:
+                pass
+            else:
+                return reply, "ai"
+
+        reply = assistant_rules.answer(
+            content,
+            project,
+            self.terrains.list_by_project(project.id),
+            self.materials.list_by_project(project.id),
+        )
+
+        return reply, "rules"
 
     def delete(self, conversation_id: int) -> None:
         self.conversations.delete(self.get(conversation_id))

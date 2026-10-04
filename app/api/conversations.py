@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.ai import AssistantClient, get_assistant
+from app.ai import Assistant, get_optional_assistant
 from app.api.deps import get_current_user
 from app.database import get_session
 from app.models import User
@@ -62,7 +62,7 @@ def send_message(
     conversation_id: int,
     data: MessageCreate,
     service: ConversationService = Depends(get_service),
-    assistant: AssistantClient = Depends(get_assistant),
+    assistant: Assistant | None = Depends(get_optional_assistant),
 ):
     return service.send_message(conversation_id, data.content, assistant)
 

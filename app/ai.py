@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+from typing import Protocol
 
 import anthropic
 
@@ -13,7 +14,11 @@ REFUSAL_REPLY = "No puedo ayudar con esa solicitud."
 EMPTY_REPLY = "No se obtuvo una respuesta. Intenta reformular la pregunta."
 
 
-class AssistantClient:
+class Assistant(Protocol):
+    def reply(self, system: str, messages: list[dict[str, str]]) -> str: ...
+
+
+class ClaudeAssistant:
     def __init__(self) -> None:
         self._client = anthropic.Anthropic(
             timeout=REQUEST_TIMEOUT_SECONDS, max_retries=1
@@ -52,11 +57,11 @@ class AssistantClient:
 
 
 @lru_cache
-def _client() -> AssistantClient:
-    return AssistantClient()
+def _client() -> ClaudeAssistant:
+    return ClaudeAssistant()
 
 
-def get_assistant() -> AssistantClient:
+def get_assistant() -> Assistant:
     if not (
         os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")
     ):
@@ -65,3 +70,10 @@ def get_assistant() -> AssistantClient:
         )
 
     return _client()
+
+
+def get_optional_assistant() -> Assistant | None:
+    try:
+        return get_assistant()
+    except AIUnavailableError:
+        return None

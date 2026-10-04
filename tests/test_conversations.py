@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.ai import get_assistant
+from app.ai import get_optional_assistant
 from app.errors import AIUnavailableError
 from app.main import app
 from tests.helpers import register
@@ -24,7 +24,7 @@ class FakeAssistant:
 @pytest.fixture
 def assistant(client):
     fake = FakeAssistant()
-    app.dependency_overrides[get_assistant] = lambda: fake
+    app.dependency_overrides[get_optional_assistant] = lambda: fake
     return fake
 
 
@@ -65,7 +65,7 @@ def test_send_message_stores_question_and_answer(client, conversation_id, assist
     assert response.status_code == 201
     question, answer = response.json()
     assert (question["role"], question["content"]) == ("user", "¿Qué cimentación conviene?")
-    assert (answer["role"], answer["content"]) == ("assistant", "reply 1")
+    assert (answer["role"], answer["content"], answer["source"]) == ("assistant", "reply 1", "ai")
 
     detail = client.get(f"/conversations/{conversation_id}").json()
     assert [m["role"] for m in detail["messages"]] == ["user", "assistant"]
@@ -98,24 +98,48 @@ def test_assistant_receives_project_data_and_full_history(
     ]
 
 
-def test_nothing_is_stored_when_the_assistant_fails(client, conversation_id, assistant):
+def test_rules_answer_when_the_assistant_fails(client, conversation_id, assistant):
     assistant.error = AIUnavailableError("Could not reach the AI assistant")
 
-    response = send(client, conversation_id)
+    response = send(client, conversation_id, "hola")
 
-    assert response.status_code == 503
-    assert response.json() == {"detail": "Could not reach the AI assistant"}
-    assert client.get(f"/conversations/{conversation_id}").json()["messages"] == []
+    assert response.status_code == 201
+    question, answer = response.json()
+    assert question["source"] is None
+    assert (answer["role"], answer["source"]) == ("assistant", "rules")
+    assert "Demo House" in answer["content"]
+    assert len(client.get(f"/conversations/{conversation_id}").json()["messages"]) == 2
 
 
-def test_unconfigured_assistant_returns_503(client, conversation_id, monkeypatch):
+def test_rules_answer_when_the_assistant_is_not_configured(
+    client, project_id, conversation_id, monkeypatch
+):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    client.post(
+        f"/projects/{project_id}/terrains",
+        json={
+            "name": "Main Lot",
+            "area_m2": 450,
+            "length_m": 30,
+            "slope_percent": 10,
+            "soil_type": "clay",
+        },
+    )
+    client.post(
+        f"/projects/{project_id}/materials",
+        json={"name": "Concrete", "unit": "m3", "quantity": 10, "unit_cost": 110.5},
+    )
 
-    response = send(client, conversation_id)
+    terrain = send(client, conversation_id, "¿Cómo es la pendiente del terreno?").json()[1]
+    materials = send(client, conversation_id, "¿Cuánto cuestan los materiales?").json()[1]
+    drawings = send(client, conversation_id, "¿Qué planos hay?").json()[1]
 
-    assert response.status_code == 503
-    assert "not configured" in response.json()["detail"]
+    assert terrain["source"] == materials["source"] == drawings["source"] == "rules"
+    assert "Main Lot" in terrain["content"] and "10 %" in terrain["content"]
+    assert "3.00 m" in terrain["content"] and "arcilloso" in terrain["content"]
+    assert "1,105.00" in materials["content"] and "Concrete" in materials["content"]
+    assert "Aún no hay planos" in drawings["content"]
 
 
 @pytest.mark.parametrize("content", ["", "x" * 4001])
