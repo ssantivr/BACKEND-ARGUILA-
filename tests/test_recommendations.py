@@ -74,6 +74,7 @@ def test_generate_for_empty_project_asks_for_data(client, project_id):
     generated = generate(client, project_id)
 
     assert [r["category"] for r in generated] == ["terrain", "materials"]
+    assert [r["priority"] for r in generated] == ["high", "low"]
     assert all(r["source"] == "system" for r in generated)
 
 
@@ -84,6 +85,7 @@ def test_generate_flags_steep_slope_and_clay_soil(client, project_id):
     generated = generate(client, project_id)
 
     assert len(generated) == 2
+    assert [r["priority"] for r in generated] == ["high", "high"]
     assert "22,5 %" in contents(generated)
     assert "arcilloso" in contents(generated)
 
@@ -105,6 +107,15 @@ def test_generate_flags_incomplete_terrain_and_materials(client, project_id):
     assert "Completa la pendiente" in text
     assert "no tienen costo unitario" in text and "Brick" in text
     assert "cantidad cero" in text and "Sand" in text
+
+
+def test_manual_recommendation_priority(client, project_id):
+    url = f"/projects/{project_id}/recommendations"
+    payload = {"category": "Design", "content": "Face the living room north."}
+
+    assert client.post(url, json=payload).json()["priority"] == "medium"
+    assert client.post(url, json={**payload, "priority": "high"}).json()["priority"] == "high"
+    assert client.post(url, json={**payload, "priority": "urgent"}).status_code == 422
 
 
 def test_generate_replaces_system_recommendations_but_keeps_user_ones(client, project_id):

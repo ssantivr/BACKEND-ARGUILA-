@@ -8,6 +8,7 @@ from app.services.geometry import polygon_area
 ProjectStatus = Literal["draft", "active", "archived"]
 Orientation = Literal["north", "south", "east", "west"]
 RecommendationSource = Literal["ai", "user", "system"]
+RecommendationPriority = Literal["high", "medium", "low"]
 ComponentKind = Literal["column", "beam", "wall"]
 
 
@@ -343,6 +344,7 @@ class DeletedItemRead(BaseModel):
 class RecommendationCreate(BaseModel):
     category: str = Field(min_length=1, max_length=80)
     content: str = Field(min_length=1, max_length=2000)
+    priority: RecommendationPriority = "medium"
 
 
 class RecommendationRead(BaseModel):
@@ -353,6 +355,7 @@ class RecommendationRead(BaseModel):
     category: str
     content: str
     source: RecommendationSource
+    priority: RecommendationPriority
     created_at: datetime
 
 

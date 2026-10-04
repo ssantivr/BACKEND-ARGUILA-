@@ -71,7 +71,7 @@ def describe_terrain(terrain: Terrain) -> str:
 
 def terrain_answer(terrains: Sequence[Terrain]) -> str:
     lines = [describe_terrain(terrain) for terrain in terrains]
-    lines.extend(content for _, content in recommendation_rules.terrain_suggestions(terrains))
+    lines.extend(content for _, content, _ in recommendation_rules.terrain_suggestions(terrains))
 
     return "\n".join(lines)
 
@@ -88,7 +88,7 @@ def materials_answer(materials: Sequence[Material]) -> str:
             f"{costliest.name} ({money(costliest.quantity * costliest.unit_cost)})."
         )
 
-    lines.extend(content for _, content in recommendation_rules.material_suggestions(materials))
+    lines.extend(content for _, content, _ in recommendation_rules.material_suggestions(materials))
 
     return "\n".join(lines)
 

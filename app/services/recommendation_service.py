@@ -55,8 +55,9 @@ class RecommendationService(ProjectScopedService):
                     source="system",
                     category=category,
                     content=content,
+                    priority=priority,
                 )
-                for category, content in suggestions
+                for category, content, priority in suggestions
             ],
         )
 

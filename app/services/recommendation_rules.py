@@ -5,7 +5,7 @@ from app.models import Material, Terrain
 STEEP_SLOPE_PERCENT = 15
 CLAY_SOIL_NAMES = {"clay", "arcilla", "arcilloso"}
 
-Suggestion = tuple[str, str]
+Suggestion = tuple[str, str, str]
 
 
 def number(value) -> str:
@@ -17,6 +17,7 @@ def terrain_suggestions(terrains: Sequence[Terrain]) -> Iterator[Suggestion]:
         yield (
             "terrain",
             "Registra al menos un terreno para poder analizar el proyecto.",
+            "high",
         )
         return
 
@@ -34,6 +35,7 @@ def terrain_suggestions(terrains: Sequence[Terrain]) -> Iterator[Suggestion]:
                 "terrain",
                 f"Completa {' y '.join(missing)} del terreno "
                 f'"{terrain.name}" para poder evaluarlo.',
+                "medium",
             )
 
         if (
@@ -45,6 +47,7 @@ def terrain_suggestions(terrains: Sequence[Terrain]) -> Iterator[Suggestion]:
                 f'El terreno "{terrain.name}" tiene una pendiente de '
                 f"{number(terrain.slope_percent)} %. Considera muros de contención, "
                 f"terrazas y un estudio de estabilidad antes de diseñar.",
+                "high",
             )
 
         if (terrain.soil_type or "").strip().lower() in CLAY_SOIL_NAMES:
@@ -52,6 +55,7 @@ def terrain_suggestions(terrains: Sequence[Terrain]) -> Iterator[Suggestion]:
                 "terrain",
                 f'El terreno "{terrain.name}" tiene suelo arcilloso. Conviene un '
                 f"estudio de suelos para definir la cimentación y el drenaje.",
+                "high",
             )
 
 
@@ -60,6 +64,7 @@ def material_suggestions(materials: Sequence[Material]) -> Iterator[Suggestion]:
         yield (
             "materials",
             "Aún no hay materiales registrados. Agrégalos para estimar el costo.",
+            "low",
         )
         return
 
@@ -70,6 +75,7 @@ def material_suggestions(materials: Sequence[Material]) -> Iterator[Suggestion]:
             "materials",
             "Estos materiales no tienen costo unitario, así que el costo total "
             "está subestimado: " + ", ".join(without_cost) + ".",
+            "medium",
         )
 
     without_quantity = [m.name for m in materials if m.quantity == 0]
@@ -80,6 +86,7 @@ def material_suggestions(materials: Sequence[Material]) -> Iterator[Suggestion]:
             "Estos materiales tienen cantidad cero: "
             + ", ".join(without_quantity)
             + ".",
+            "low",
         )
 
 

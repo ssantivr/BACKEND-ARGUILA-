@@ -269,7 +269,10 @@ class Material(Base):
 
 class Recommendation(Base):
     __tablename__ = "recommendations"
-    __table_args__ = (CheckConstraint("source IN ('ai', 'user', 'system')"),)
+    __table_args__ = (
+        CheckConstraint("source IN ('ai', 'user', 'system')"),
+        CheckConstraint("priority IN ('high', 'medium', 'low')"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(
@@ -278,6 +281,7 @@ class Recommendation(Base):
     category: Mapped[str] = mapped_column(String(80))
     content: Mapped[str] = mapped_column(Text)
     source: Mapped[str] = mapped_column(String(10), server_default="ai")
+    priority: Mapped[str] = mapped_column(String(10), server_default="medium")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
