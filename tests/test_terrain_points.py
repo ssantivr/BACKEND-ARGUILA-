@@ -31,6 +31,12 @@ def test_polygon_area_uses_the_shoelace_formula():
     assert polygon_area([(0, 0), (5, 5), (10, 10)]) == 0
 
 
+def test_polygon_area_of_fewer_than_three_points_is_zero():
+    assert polygon_area([]) == 0
+    assert polygon_area([(3, 4)]) == 0
+    assert polygon_area([(0, 0), (5, 5)]) == 0
+
+
 def test_terrain_without_points_has_an_empty_list(client, project_id):
     assert create(client, project_id).json()["points"] == []
 

@@ -319,3 +319,131 @@ def test_linked_list_inserts_far_from_both_ends(list_type):
 
     assert list(items) == [10, 20, 25, 30, 35, 40, 50]
     assert len(items) == 7
+
+
+@pytest.mark.parametrize("list_type", [SinglyLinkedList, DoublyLinkedList])
+def test_remove_on_empty_linked_list_returns_false(list_type):
+    items = list_type()
+
+    assert not items.remove(1)
+    assert items.is_empty()
+    assert len(items) == 0
+
+
+@pytest.mark.parametrize("list_type", [SinglyLinkedList, DoublyLinkedList])
+def test_remove_deletes_only_the_first_match(list_type):
+    items = list_type()
+
+    for value in (10, 20, 30, 20, 40):
+        items.push_back(value)
+
+    assert items.remove(20)
+    assert list(items) == [10, 30, 20, 40]
+    assert len(items) == 4
+
+
+@pytest.mark.parametrize("list_type", [SinglyLinkedList, DoublyLinkedList])
+def test_single_element_list_empties_and_stays_usable(list_type):
+    items = list_type()
+    items.push_front(7)
+
+    assert list(items) == [7]
+    assert len(items) == 1
+    assert 7 in items
+
+    assert items.remove(7)
+    assert items.is_empty()
+    assert list(items) == []
+
+    items.push_back(8)
+    assert items.pop_front() == 8
+    assert items.is_empty()
+
+    items.push_back(9)
+    items.push_back(10)
+    assert list(items) == [9, 10]
+
+
+def test_reverse_single_element_list_keeps_head_and_tail():
+    items: SinglyLinkedList[int] = SinglyLinkedList()
+    items.push_back(1)
+
+    items.reverse()
+    assert list(items) == [1]
+
+    items.push_back(2)
+    items.push_front(0)
+    assert list(items) == [0, 1, 2]
+
+
+def test_single_element_doubly_linked_list_reads_the_same_both_ways():
+    items: DoublyLinkedList[int] = DoublyLinkedList()
+    items.push_back(1)
+
+    assert list(items) == list(reversed(items)) == [1]
+    assert items.pop_back() == 1
+    assert list(items) == list(reversed(items)) == []
+
+    items.push_front(2)
+    assert list(reversed(items)) == [2]
+
+
+@pytest.mark.parametrize("list_type", [SinglyLinkedList, DoublyLinkedList])
+def test_long_linked_list_keeps_order_after_many_removals(list_type):
+    items = list_type()
+
+    for value in range(1000):
+        items.push_back(value)
+
+    for value in range(0, 1000, 2):
+        assert items.remove(value)
+
+    assert len(items) == 500
+    assert list(items) == list(range(1, 1000, 2))
+    assert 999 in items
+    assert 998 not in items
+
+
+def test_structures_store_types_other_than_int():
+    stack: Stack[str] = Stack()
+    queue: Queue[str] = Queue()
+    array: DynamicArray[str] = DynamicArray()
+    singly: SinglyLinkedList[str] = SinglyLinkedList()
+    doubly: DoublyLinkedList[str] = DoublyLinkedList()
+
+    for name in ("plan", "elevation"):
+        stack.push(name)
+        queue.enqueue(name)
+        array.append(name)
+        singly.push_back(name)
+        doubly.push_back(name)
+
+    assert stack.pop() == "elevation"
+    assert queue.dequeue() == "plan"
+    assert list(array) == ["plan", "elevation"]
+    assert singly.remove("plan") and list(singly) == ["elevation"]
+    assert doubly.pop_back() == "elevation"
+
+
+def test_searches_work_with_strings():
+    names = ["brick", "glass", "wood"]
+
+    assert linear_search(names, "glass") == 1
+    assert binary_search(names, "wood") == 2
+    assert binary_search(names, "steel") == -1
+
+
+def test_dynamic_array_empties_and_is_reused():
+    array: DynamicArray[int] = DynamicArray(capacity=1)
+    array.append(1)
+
+    assert array.remove_at(0) == 1
+    assert len(array) == 0
+    assert list(array) == []
+
+    with pytest.raises(IndexError):
+        array.remove_at(0)
+
+    array.append(2)
+    array.insert_at(0, 1)
+    assert list(array) == [1, 2]
