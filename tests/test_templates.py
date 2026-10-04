@@ -72,6 +72,32 @@ def test_create_project_from_template(client):
     assert sorted({room["base_m"] for room in structure["rooms"]}) == [0, 2.8]
 
 
+def test_template_with_materials_creates_them_with_the_project(client):
+    register(client)
+
+    project = client.post("/templates/vivienda-compacta/projects").json()
+    materials = client.get(f"/projects/{project['id']}/materials").json()
+
+    assert project["location"] == "Ibarra, Imbabura"
+    assert len(materials) == 8
+    assert {material["category"] for material in materials} == {
+        "Estructura",
+        "Mampostería",
+        "Acabados",
+        "Carpintería",
+        "Cubierta",
+    }
+    assert all(material["unit_cost"] > 0 for material in materials)
+
+
+def test_template_without_materials_creates_none(client):
+    register(client)
+
+    project = client.post("/templates/oficina-profesional/projects").json()
+
+    assert client.get(f"/projects/{project['id']}/materials").json() == []
+
+
 def test_creating_the_same_template_twice_picks_a_free_name(client):
     register(client)
 

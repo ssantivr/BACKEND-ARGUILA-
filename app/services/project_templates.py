@@ -25,6 +25,15 @@ class TemplateLevel:
 
 
 @dataclass(frozen=True)
+class TemplateMaterial:
+    name: str
+    category: str
+    unit: str
+    quantity: float
+    unit_cost: float
+
+
+@dataclass(frozen=True)
 class ProjectTemplate:
     id: str
     name: str
@@ -36,6 +45,7 @@ class ProjectTemplate:
     slope_percent: float
     soil_type: str
     levels: tuple[TemplateLevel, ...]
+    materials: tuple[TemplateMaterial, ...] = ()
 
     @property
     def lot_area_m2(self) -> float:
@@ -126,7 +136,7 @@ TEMPLATES: tuple[ProjectTemplate, ...] = (
         name="Vivienda compacta",
         kind="Casa",
         description="Casa de un nivel para lote medianero, con dos habitaciones y patio.",
-        location=None,
+        location="Ibarra, Imbabura",
         lot_width_m=8,
         lot_length_m=20,
         slope_percent=2,
@@ -140,6 +150,16 @@ TEMPLATES: tuple[ProjectTemplate, ...] = (
                 + row(7, 4, 0, ("Habitación 1", 4), ("Baño", 1.6), ("Hall", 2.4))
                 + row(11, 4, 0, ("Habitación 2", 4.5), ("Lavandería", 3.5)),
             ),
+        ),
+        materials=(
+            TemplateMaterial("Hormigón 210 kg/cm²", "Estructura", "m³", 28, 118),
+            TemplateMaterial("Acero de refuerzo 12 mm", "Estructura", "kg", 1650, 1.32),
+            TemplateMaterial("Bloque de 15 cm", "Mampostería", "u", 2400, 0.52),
+            TemplateMaterial("Cemento", "Mampostería", "saco", 120, 8.1),
+            TemplateMaterial("Cerámica de piso", "Acabados", "m²", 96, 13.5),
+            TemplateMaterial("Pintura interior", "Acabados", "galón", 18, 17.9),
+            TemplateMaterial("Ventana de aluminio", "Carpintería", "m²", 14, 95),
+            TemplateMaterial("Teja de fibrocemento", "Cubierta", "m²", 115, 12.4),
         ),
     ),
     ProjectTemplate(

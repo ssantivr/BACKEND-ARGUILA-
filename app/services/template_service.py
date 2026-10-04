@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.errors import NotFoundError
-from app.models import Plan, Project, Room, StructuralComponent, Terrain, User
+from app.models import Material, Plan, Project, Room, StructuralComponent, Terrain, User
 from app.repositories.project_repository import ProjectRepository
 from app.services.project_templates import (
     COLUMN_SIDE_M,
@@ -44,6 +44,16 @@ class TemplateService:
             )
         ]
         project.plans = [Plan(title=level.title, level=level.level) for level in template.levels]
+        project.materials = [
+            Material(
+                name=material.name,
+                category=material.category,
+                unit=material.unit,
+                quantity=material.quantity,
+                unit_cost=material.unit_cost,
+            )
+            for material in template.materials
+        ]
         self.session.add(project)
         self.session.flush()
 
