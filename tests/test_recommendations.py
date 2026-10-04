@@ -84,7 +84,7 @@ def test_generate_flags_steep_slope_and_clay_soil(client, project_id):
     generated = generate(client, project_id)
 
     assert len(generated) == 2
-    assert "22.5 %" in contents(generated)
+    assert "22,5 %" in contents(generated)
     assert "arcilloso" in contents(generated)
 
 

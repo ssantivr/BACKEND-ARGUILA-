@@ -3,6 +3,7 @@ from collections.abc import Sequence
 
 from app.models import Material, Project, Terrain
 from app.services import recommendation_rules
+from app.services.recommendation_rules import number
 
 GENTLE_SLOPE_PERCENT = 5
 
@@ -37,12 +38,8 @@ def count(amount: int, singular: str, plural: str) -> str:
     return f"{amount} {singular if amount == 1 else plural}"
 
 
-def number(value) -> str:
-    return f"{float(value):g}"
-
-
 def money(value) -> str:
-    return f"{float(value):,.2f}"
+    return f"{float(value):,.2f}".translate(str.maketrans(",.", ".,"))
 
 
 def describe_terrain(terrain: Terrain) -> str:
@@ -64,7 +61,7 @@ def describe_terrain(terrain: Terrain) -> str:
 
         if terrain.length_m is not None and slope > 0:
             drop = float(terrain.length_m) * float(slope) / 100
-            sentences.append(f"El desnivel a lo largo del lote es de {drop:.2f} m.")
+            sentences.append(f"El desnivel a lo largo del lote es de {number(round(drop, 2))} m.")
 
     if terrain.soil_type:
         sentences.append(f"Tipo de suelo registrado: {terrain.soil_type}.")

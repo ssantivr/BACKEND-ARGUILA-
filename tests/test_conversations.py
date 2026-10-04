@@ -137,8 +137,8 @@ def test_rules_answer_when_the_assistant_is_not_configured(
 
     assert terrain["source"] == materials["source"] == drawings["source"] == "rules"
     assert "Main Lot" in terrain["content"] and "10 %" in terrain["content"]
-    assert "3.00 m" in terrain["content"] and "arcilloso" in terrain["content"]
-    assert "1,105.00" in materials["content"] and "Concrete" in materials["content"]
+    assert "3 m" in terrain["content"] and "arcilloso" in terrain["content"]
+    assert "1.105,00" in materials["content"] and "Concrete" in materials["content"]
     assert "Aún no hay planos" in drawings["content"]
 
 

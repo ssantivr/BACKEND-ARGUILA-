@@ -8,6 +8,10 @@ CLAY_SOIL_NAMES = {"clay", "arcilla", "arcilloso"}
 Suggestion = tuple[str, str]
 
 
+def number(value) -> str:
+    return f"{float(value):g}".replace(".", ",")
+
+
 def terrain_suggestions(terrains: Sequence[Terrain]) -> Iterator[Suggestion]:
     if not terrains:
         yield (
@@ -39,7 +43,7 @@ def terrain_suggestions(terrains: Sequence[Terrain]) -> Iterator[Suggestion]:
             yield (
                 "terrain",
                 f'El terreno "{terrain.name}" tiene una pendiente de '
-                f"{float(terrain.slope_percent):g} %. Considera muros de contención, "
+                f"{number(terrain.slope_percent)} %. Considera muros de contención, "
                 f"terrazas y un estudio de estabilidad antes de diseñar.",
             )
 
