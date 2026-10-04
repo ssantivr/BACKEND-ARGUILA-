@@ -111,6 +111,21 @@ class OllamaAssistant:
 
         return models[0]["name"]
 
+    def available_model(self) -> str | None:
+        base_url = os.environ.get("OLLAMA_URL", DEFAULT_OLLAMA_URL).rstrip("/")
+
+        try:
+            response = self._client.get(f"{base_url}/api/tags")
+            response.raise_for_status()
+            models = [model["name"] for model in response.json()["models"]]
+        except (httpx.HTTPError, KeyError, TypeError, ValueError):
+            return None
+
+        if not models:
+            return None
+
+        return os.environ.get("OLLAMA_MODEL") or models[0]
+
 
 @lru_cache
 def _client() -> ClaudeAssistant:
@@ -127,6 +142,18 @@ def get_assistant() -> Assistant:
         return _client()
 
     return _local_client()
+
+
+def get_assistant_status() -> dict[str, str | None]:
+    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
+        return {"provider": "claude", "model": MODEL}
+
+    model = _local_client().available_model()
+
+    if model is not None:
+        return {"provider": "ollama", "model": model}
+
+    return {"provider": "rules", "model": None}
 
 
 def get_optional_assistant() -> Assistant | None:

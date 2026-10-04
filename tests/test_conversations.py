@@ -181,3 +181,18 @@ def test_requires_authentication(client):
     assert client.get("/projects/1/conversations").status_code == 401
     assert client.get("/conversations/1").status_code == 401
     assert client.post("/conversations/1/messages", json={"content": "hi"}).status_code == 401
+
+
+def test_assistant_status_reports_who_answers(client, monkeypatch):
+    assert client.get("/assistant/status").status_code == 401
+
+    register(client)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+
+    assert client.get("/assistant/status").json() == {"provider": "rules", "model": None}
+
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+
+    status = client.get("/assistant/status").json()
+    assert status["provider"] == "claude" and status["model"]

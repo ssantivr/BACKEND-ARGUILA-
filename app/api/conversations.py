@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
-from app.ai import Assistant, get_optional_assistant
+from app.ai import Assistant, get_assistant_status, get_optional_assistant
 from app.api.deps import get_current_user
 from app.database import get_session
 from app.models import User
 from app.schemas import (
+    AssistantStatus,
     ConversationCreate,
     ConversationDetail,
     ConversationRead,
@@ -22,6 +23,14 @@ def get_service(
     user: User = Depends(get_current_user),
 ) -> ConversationService:
     return ConversationService(session, user)
+
+
+@router.get("/assistant/status", response_model=AssistantStatus)
+def assistant_status(
+    user: User = Depends(get_current_user),
+    current: dict[str, str | None] = Depends(get_assistant_status),
+):
+    return current
 
 
 @router.post(

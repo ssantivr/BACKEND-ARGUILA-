@@ -253,6 +253,11 @@ class ConversationRead(BaseModel):
     created_at: datetime
 
 
+class AssistantStatus(BaseModel):
+    provider: Literal["claude", "ollama", "rules"]
+    model: str | None
+
+
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
 

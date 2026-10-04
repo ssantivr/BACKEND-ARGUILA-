@@ -218,3 +218,21 @@ def test_local_assistant_is_chosen_without_an_api_key(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
 
     assert isinstance(ai.get_assistant(), ai.OllamaAssistant)
+
+
+def test_ollama_available_model_prefers_the_configured_one(monkeypatch):
+    monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+    installed = lambda request: httpx.Response(200, json={"models": [{"name": "llama3.2"}]})
+    empty = lambda request: httpx.Response(200, json={"models": []})
+
+    def unreachable(request):
+        raise httpx.ConnectError("refused", request=request)
+
+    assert ollama_assistant(installed).available_model() == "llama3.2"
+    assert ollama_assistant(empty).available_model() is None
+    assert ollama_assistant(unreachable).available_model() is None
+
+    monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5")
+
+    assert ollama_assistant(installed).available_model() == "qwen2.5"
+    assert ollama_assistant(unreachable).available_model() is None
