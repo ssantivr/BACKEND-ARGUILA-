@@ -2,7 +2,7 @@ import smtplib
 import sys
 
 from app.ai import get_assistant
-from app.dev import ENV_FILE, load_env_file
+from app.env import ENV_FILE, load_env_file
 from app.errors import AIUnavailableError
 from app.mailer import ConsoleMailer, get_mailer
 

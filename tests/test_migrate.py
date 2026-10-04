@@ -2,6 +2,7 @@ import pytest
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
+from app import migrate
 from app.migrate import MIGRATIONS_DIR, apply_migrations
 
 
@@ -56,3 +57,43 @@ def test_project_migrations_are_numbered_without_gaps():
 
     assert names, "there must be at least the initial migration"
     assert numbers == list(range(1, len(names) + 1))
+
+
+def test_command_reads_the_database_url_from_the_env_file(tmp_path, monkeypatch, capsys):
+    database = tmp_path / "command.db"
+    env_file = tmp_path / ".env"
+    env_file.write_text(f"DATABASE_URL=sqlite:///{database.as_posix()}\n", encoding="utf-8")
+    migrations = tmp_path / "migrations"
+    migrations.mkdir()
+    (migrations / "001_first.sql").write_text("CREATE TABLE first (id INTEGER)", encoding="utf-8")
+    seed = tmp_path / "seed.sql"
+    seed.write_text("INSERT INTO first (id) VALUES (7)", encoding="utf-8")
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(migrate, "ENV_FILE", env_file)
+    monkeypatch.setattr(migrate, "MIGRATIONS_DIR", migrations)
+    monkeypatch.setattr(migrate, "SEED_FILE", seed)
+    monkeypatch.setattr(migrate.sys, "argv", ["migrate", "--seed"])
+    migrate.get_engine.cache_clear()
+
+    try:
+        migrate.main()
+
+        with migrate.get_engine().connect() as connection:
+            assert connection.execute(text("SELECT id FROM first")).scalars().all() == [7]
+    finally:
+        migrate.get_engine().dispose()
+        migrate.get_engine.cache_clear()
+
+    output = capsys.readouterr().out
+
+    assert "Applied: 001_first.sql" in output
+    assert "Seed data loaded" in output
+
+
+def test_command_stops_with_a_clear_message_without_a_database_url(tmp_path, monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(migrate, "ENV_FILE", tmp_path / "missing.env")
+
+    with pytest.raises(SystemExit, match="backend/.env"):
+        migrate.main()

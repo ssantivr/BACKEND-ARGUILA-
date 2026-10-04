@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.ai import Assistant
 from app.errors import AIUnavailableError, NotFoundError
+from app.logs import logger
 from app.models import AIConversation, AIMessage, Project, User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.material_repository import MaterialRepository
@@ -113,8 +114,8 @@ class ConversationService(ProjectScopedService):
                     SYSTEM_PROMPT.format(project_data=self._project_data(project)),
                     build_context(conversation.messages, content),
                 )
-            except AIUnavailableError:
-                pass
+            except AIUnavailableError as error:
+                logger.warning("assistant_fallback", extra={"reason": str(error)})
             else:
                 return reply, "ai"
 

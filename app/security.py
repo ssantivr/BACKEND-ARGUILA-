@@ -2,13 +2,20 @@ import hashlib
 import hmac
 import secrets
 
+from argon2 import PasswordHasher
+from argon2.exceptions import Argon2Error, InvalidHashError
+
+ARGON2_PREFIX = "$argon2"
+LEGACY_SCHEME = "scrypt"
 SCRYPT_N = 2**14
 SCRYPT_R = 8
 SCRYPT_P = 1
 KEY_BYTES = 32
 
+_hasher = PasswordHasher()
 
-def _derive(password: str, salt: bytes) -> bytes:
+
+def _derive_legacy(password: str, salt: bytes) -> bytes:
     return hashlib.scrypt(
         password.encode("utf-8"),
         salt=salt,
@@ -19,23 +26,45 @@ def _derive(password: str, salt: bytes) -> bytes:
     )
 
 
-def hash_password(password: str) -> str:
-    salt = secrets.token_bytes(16)
-    return f"scrypt${salt.hex()}${_derive(password, salt).hex()}"
-
-
-def verify_password(password: str, stored: str | None) -> bool:
+def _verify_legacy(password: str, stored: str) -> bool:
     try:
-        scheme, salt_hex, key_hex = (stored or "").split("$")
+        scheme, salt_hex, key_hex = stored.split("$")
         salt = bytes.fromhex(salt_hex)
         expected = bytes.fromhex(key_hex)
     except ValueError:
         return False
 
-    if scheme != "scrypt":
+    if scheme != LEGACY_SCHEME:
         return False
 
-    return hmac.compare_digest(_derive(password, salt), expected)
+    return hmac.compare_digest(_derive_legacy(password, salt), expected)
+
+
+def hash_password(password: str) -> str:
+    return _hasher.hash(password)
+
+
+def verify_password(password: str, stored: str | None) -> bool:
+    if not stored:
+        return False
+
+    if not stored.startswith(ARGON2_PREFIX):
+        return _verify_legacy(password, stored)
+
+    try:
+        return _hasher.verify(stored, password)
+    except (Argon2Error, InvalidHashError):
+        return False
+
+
+def needs_rehash(stored: str | None) -> bool:
+    if not stored or not stored.startswith(ARGON2_PREFIX):
+        return True
+
+    try:
+        return _hasher.check_needs_rehash(stored)
+    except InvalidHashError:
+        return True
 
 
 DUMMY_PASSWORD_HASH = hash_password(secrets.token_urlsafe(16))

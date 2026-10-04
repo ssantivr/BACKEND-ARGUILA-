@@ -1,4 +1,5 @@
 import os
+import time
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,6 +31,8 @@ from app.errors import (
     TooManyAttemptsError,
     UnsupportedFileError,
 )
+
+from app.logs import logger
 
 DEFAULT_APP_URL = "http://localhost:5173"
 
@@ -64,6 +67,25 @@ async def add_security_headers(request: Request, call_next):
 
     for name, value in SECURITY_HEADERS.items():
         response.headers.setdefault(name, value)
+
+    return response
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    started = time.perf_counter()
+    fields = {"method": request.method, "path": request.url.path}
+
+    try:
+        response = await call_next(request)
+    except Exception:
+        fields["duration_ms"] = round((time.perf_counter() - started) * 1000, 1)
+        logger.exception("request_failed", extra=fields)
+        raise
+
+    fields["status"] = response.status_code
+    fields["duration_ms"] = round((time.perf_counter() - started) * 1000, 1)
+    logger.info("request", extra=fields)
 
     return response
 

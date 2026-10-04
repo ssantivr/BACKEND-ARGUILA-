@@ -10,6 +10,7 @@ from app.errors import (
     InvalidTokenError,
     TooManyAttemptsError,
 )
+from app.logs import logger
 from app.mailer import Mailer
 from app.models import PasswordResetToken, User, UserSession
 from app.repositories.password_reset_repository import PasswordResetRepository
@@ -56,6 +57,7 @@ class AuthService:
         email = normalize_email(data.email)
 
         if login_limiter.is_blocked(email):
+            logger.warning("login_blocked")
             raise TooManyAttemptsError("Too many failed attempts, try again in a minute")
 
         user = self.users.get_by_email(email)
@@ -63,9 +65,15 @@ class AuthService:
 
         if not security.verify_password(data.password, stored) or user is None:
             login_limiter.record_failure(email)
+            logger.warning("login_failed")
             raise AuthenticationError("Invalid email or password")
 
         login_limiter.reset(email)
+
+        if security.needs_rehash(user.password_hash):
+            user.password_hash = security.hash_password(data.password)
+            self.users.save(user)
+            logger.info("password_rehashed", extra={"user_id": user.id})
 
         return user, self._start_session(user)
 

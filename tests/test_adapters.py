@@ -261,3 +261,44 @@ def test_ollama_assistant_stops_retrying_for_a_while_after_a_failed_connection(m
         assistant.reply("s", [])
 
     assert len(attempts) == 2
+
+
+def test_claude_assistant_is_created_with_a_request_timeout(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+
+    client = ai.ClaudeAssistant()._client
+
+    assert client.timeout == ai.REQUEST_TIMEOUT_SECONDS
+    assert client.max_retries == 1
+
+
+def test_claude_assistant_turns_a_timeout_into_the_application_error():
+    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
+    assistant, _ = claude_assistant(anthropic.APITimeoutError(request=request))
+
+    with pytest.raises(AIUnavailableError, match="Could not reach"):
+        assistant.reply("s", [])
+
+
+def test_ollama_assistant_has_connect_and_read_timeouts():
+    timeout = ai.OllamaAssistant()._client.timeout
+
+    assert timeout.connect == ai.CONNECT_TIMEOUT_SECONDS
+    assert timeout.read == ai.REQUEST_TIMEOUT_SECONDS
+
+
+def test_ollama_assistant_turns_a_slow_answer_into_the_application_error(monkeypatch):
+    monkeypatch.setenv("OLLAMA_MODEL", "llama3.2")
+    attempts = []
+
+    def slow(request):
+        attempts.append(request)
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    assistant = ollama_assistant(slow)
+
+    for _ in range(2):
+        with pytest.raises(AIUnavailableError):
+            assistant.reply("s", [])
+
+    assert len(attempts) == 2

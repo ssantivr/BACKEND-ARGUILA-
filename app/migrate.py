@@ -4,6 +4,7 @@ from pathlib import Path
 from sqlalchemy import Engine, text
 
 from app.database import get_engine
+from app.env import ENV_FILE, load_env_file, require_database_url
 
 DATABASE_DIR = Path(__file__).resolve().parents[2] / "database"
 MIGRATIONS_DIR = DATABASE_DIR / "migrations"
@@ -43,8 +44,11 @@ def apply_migrations(engine: Engine, directory: Path = MIGRATIONS_DIR) -> list[s
 
 
 def main() -> None:
+    load_env_file(ENV_FILE)
+    require_database_url()
+
     engine = get_engine()
-    applied = apply_migrations(engine)
+    applied = apply_migrations(engine, MIGRATIONS_DIR)
 
     if applied:
         print("Applied: " + ", ".join(applied))
