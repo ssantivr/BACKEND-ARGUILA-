@@ -80,6 +80,7 @@ def test_structure_stacks_one_storey_per_plan_inside_the_setback(client, project
             "width_m": 14,
             "depth_m": 24,
             "height_m": 3,
+            "surface": None,
         },
         {
             "kind": "volume",
@@ -94,6 +95,7 @@ def test_structure_stacks_one_storey_per_plan_inside_the_setback(client, project
             "width_m": 14,
             "depth_m": 24,
             "height_m": 3,
+            "surface": None,
         },
     ]
 
@@ -180,6 +182,7 @@ def test_structure_draws_rooms_and_no_volumes_once_a_plan_has_rooms(client, proj
         "width_m": 5,
         "depth_m": 6,
         "height_m": 4,
+        "surface": None,
     }
     assert rooms[2]["plan_id"] == upper["id"]
 
@@ -255,6 +258,7 @@ def test_structure_places_components_on_their_level(client, project_id):
         "width_m": 0.4,
         "depth_m": 0.4,
         "height_m": 3.5,
+        "surface": None,
     }
     assert [(item["name"], item["base_m"]) for item in body["components"]] == [
         ("C1", 0),
@@ -276,6 +280,7 @@ def test_structure_hangs_a_lone_beam_from_the_default_storey_height(client, proj
             "width_m": 5,
             "depth_m": 0.3,
             "height_m": 0.4,
+            "surface": None,
         },
     )
 
@@ -318,3 +323,83 @@ def test_cors_ignores_unknown_origins(client):
     response = client.get("/health", headers={"Origin": "http://evil.example"})
 
     assert "access-control-allow-origin" not in response.headers
+
+
+def surface_url(project_id, kind, element_id):
+    return f"/projects/{project_id}/structure/{kind}/{element_id}/surface"
+
+
+@pytest.fixture
+def modelled(client, project_id):
+    plan = client.post(
+        f"/projects/{project_id}/plans", json={"title": "Ground floor", "level": "0"}
+    ).json()
+    base = {"plan_id": plan["id"], "x_m": 0, "y_m": 0, "width_m": 4, "depth_m": 3, "height_m": 3}
+    room = client.post(f"/projects/{project_id}/rooms", json={**base, "name": "Hall"}).json()
+    column = client.post(
+        f"/projects/{project_id}/components", json={**base, "kind": "column", "name": "C1"}
+    ).json()
+
+    return {"plan": plan["id"], "room": room["id"], "column": column["id"]}
+
+
+def test_surface_of_a_room_and_a_component_is_saved(client, project_id, modelled):
+    room = client.patch(surface_url(project_id, "room", modelled["room"]), json={"surface": "glass"})
+    column = client.patch(
+        surface_url(project_id, "column", modelled["column"]), json={"surface": "steel"}
+    )
+
+    body = structure(client, project_id).json()
+
+    assert (room.status_code, column.status_code) == (204, 204)
+    assert body["rooms"][0]["surface"] == "glass"
+    assert body["components"][0]["surface"] == "steel"
+
+
+def test_surface_of_a_volume_is_saved_on_its_plan(client, project_id):
+    client.post(
+        f"/projects/{project_id}/terrains",
+        json={"name": "Lot", "area_m2": 600, "width_m": 20, "length_m": 30},
+    )
+    plan = client.post(
+        f"/projects/{project_id}/plans", json={"title": "Ground floor", "level": "0"}
+    ).json()
+
+    response = client.patch(surface_url(project_id, "volume", plan["id"]), json={"surface": "wood"})
+
+    assert response.status_code == 204
+    assert structure(client, project_id).json()["rooms"][0]["surface"] == "wood"
+
+
+def test_surface_rejects_an_unknown_material_or_kind(client, project_id, modelled):
+    url = surface_url(project_id, "room", modelled["room"])
+
+    assert client.patch(url, json={"surface": "gold"}).status_code == 422
+    assert (
+        client.patch(surface_url(project_id, "roof", 1), json={"surface": "glass"}).status_code
+        == 422
+    )
+
+
+def test_surface_needs_an_element_of_that_kind_in_the_project(client, project_id, modelled):
+    other_project = client.post("/projects", json={"name": "Other"}).json()["id"]
+    body = {"surface": "glass"}
+
+    assert client.patch(surface_url(project_id, "room", 9999), json=body).status_code == 404
+    assert (
+        client.patch(surface_url(project_id, "beam", modelled["column"]), json=body).status_code
+        == 404
+    )
+    assert (
+        client.patch(surface_url(other_project, "room", modelled["room"]), json=body).status_code
+        == 404
+    )
+
+
+def test_surface_is_hidden_from_other_users(client, project_id, modelled):
+    other = TestClient(app)
+    register(other, name="Eve", email="eve@example.com")
+    url = surface_url(project_id, "room", modelled["room"])
+
+    assert other.patch(url, json={"surface": "glass"}).status_code == 404
+    assert TestClient(app).patch(url, json={"surface": "glass"}).status_code == 401

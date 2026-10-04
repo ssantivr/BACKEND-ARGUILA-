@@ -10,6 +10,8 @@ Orientation = Literal["north", "south", "east", "west"]
 RecommendationSource = Literal["ai", "user", "system"]
 RecommendationPriority = Literal["high", "medium", "low"]
 ComponentKind = Literal["column", "beam", "wall"]
+ElementKind = Literal["room", "volume", "column", "beam", "wall"]
+SurfaceMaterial = Literal["concrete", "brick", "plaster", "glass", "steel", "wood", "stone"]
 
 
 class RegisterRequest(BaseModel):
@@ -272,6 +274,7 @@ class StructureRoom(BaseModel):
     width_m: float
     depth_m: float
     height_m: float
+    surface: SurfaceMaterial | None = None
 
 
 class ComponentCreate(BaseModel):
@@ -325,6 +328,11 @@ class StructureComponent(BaseModel):
     width_m: float
     depth_m: float
     height_m: float
+    surface: SurfaceMaterial | None = None
+
+
+class SurfaceUpdate(BaseModel):
+    surface: SurfaceMaterial
 
 
 class StructureRead(BaseModel):

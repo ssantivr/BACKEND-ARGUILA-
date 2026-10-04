@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app.errors import NotFoundError
 from app.models import Plan, Room, StructuralComponent, Terrain, User
 from app.repositories.component_repository import ComponentRepository
 from app.repositories.plan_repository import PlanRepository
@@ -67,6 +68,7 @@ def build_volume(plan: Plan, lot: Lot, base: float) -> StructureRoom:
         width_m=width - 2 * setback,
         depth_m=length - 2 * setback,
         height_m=STOREY_HEIGHT_M,
+        surface=plan.surface,
     )
 
 
@@ -86,6 +88,7 @@ def build_room(plan: Plan, room: Room, base: float) -> StructureRoom:
         width_m=width,
         depth_m=depth,
         height_m=float(room.height_m),
+        surface=room.surface,
     )
 
 
@@ -112,6 +115,7 @@ def build_component(
         width_m=width,
         depth_m=depth,
         height_m=height,
+        surface=component.surface,
     )
 
 
@@ -149,6 +153,25 @@ class StructureService(ProjectScopedService):
         return StructureRead(
             project_id=project_id, terrains=terrains, rooms=rooms, components=components
         )
+
+    def set_surface(self, project_id: int, kind: str, element_id: int, surface: str) -> None:
+        self._ensure_project_exists(project_id)
+
+        if kind == "room":
+            repository, element = self.rooms, self.rooms.get(element_id)
+        elif kind == "volume":
+            repository, element = self.plans, self.plans.get(element_id)
+        else:
+            repository, element = self.components, self.components.get(element_id)
+
+            if element is not None and element.kind != kind:
+                element = None
+
+        if element is None or element.project_id != project_id:
+            raise NotFoundError("Element not found")
+
+        element.surface = surface
+        repository.save(element)
 
     def _place_terrains(self, project_id: int) -> tuple[list[StructureTerrain], Lot | None]:
         placed: list[StructureTerrain] = []

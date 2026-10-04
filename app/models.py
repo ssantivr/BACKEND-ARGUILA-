@@ -158,8 +158,14 @@ class File(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
+SURFACE_CHECK = (
+    "surface IN ('concrete', 'brick', 'plaster', 'glass', 'steel', 'wood', 'stone')"
+)
+
+
 class Plan(Base):
     __tablename__ = "plans"
+    __table_args__ = (CheckConstraint(SURFACE_CHECK),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(
@@ -171,6 +177,7 @@ class Plan(Base):
     title: Mapped[str] = mapped_column(String(160))
     level: Mapped[str | None] = mapped_column(String(60))
     scale: Mapped[str | None] = mapped_column(String(20))
+    surface: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     rooms: Mapped[list["Room"]] = relationship(cascade="all, delete-orphan")
@@ -185,6 +192,7 @@ class Room(Base):
         CheckConstraint("width_m > 0"),
         CheckConstraint("depth_m > 0"),
         CheckConstraint("height_m > 0"),
+        CheckConstraint(SURFACE_CHECK),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -200,6 +208,7 @@ class Room(Base):
     width_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
     depth_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
     height_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
+    surface: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
@@ -210,6 +219,7 @@ class StructuralComponent(Base):
         CheckConstraint("width_m > 0"),
         CheckConstraint("depth_m > 0"),
         CheckConstraint("height_m > 0"),
+        CheckConstraint(SURFACE_CHECK),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -226,6 +236,7 @@ class StructuralComponent(Base):
     width_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
     depth_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
     height_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
+    surface: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
