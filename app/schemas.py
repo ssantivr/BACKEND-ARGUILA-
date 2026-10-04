@@ -46,14 +46,14 @@ class UserRead(BaseModel):
 
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=160)
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=2000)
     location: str | None = Field(default=None, max_length=255)
     status: ProjectStatus = "draft"
 
 
 class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=160)
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=2000)
     location: str | None = Field(default=None, max_length=255)
     status: ProjectStatus | None = None
 

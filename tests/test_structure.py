@@ -326,6 +326,16 @@ def test_cors_ignores_unknown_origins(client):
     assert "access-control-allow-origin" not in response.headers
 
 
+def test_every_response_carries_the_security_headers(client):
+    for path in ("/health", "/projects", "/missing"):
+        headers = client.get(path).headers
+
+        assert headers["x-content-type-options"] == "nosniff"
+        assert headers["referrer-policy"] == "no-referrer"
+        assert headers["cache-control"] == "no-store"
+        assert headers["content-security-policy"] == f"frame-ancestors 'self' {ORIGIN}"
+
+
 def surface_url(project_id, kind, element_id):
     return f"/projects/{project_id}/structure/{kind}/{element_id}/surface"
 

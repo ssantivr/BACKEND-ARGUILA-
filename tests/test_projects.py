@@ -74,3 +74,15 @@ def test_delete_project(client, user):
     assert client.delete(f"/projects/{project_id}").status_code == 204
     assert client.get(f"/projects/{project_id}").status_code == 404
     assert client.delete(f"/projects/{project_id}").status_code == 404
+
+
+def test_description_over_the_length_limit_is_rejected(client, user):
+    assert create_project(client, description="x" * 2000).status_code == 201
+
+    project_id = create_project(client, name="Second House").json()["id"]
+
+    assert create_project(client, name="Third House", description="x" * 2001).status_code == 422
+    assert (
+        client.patch(f"/projects/{project_id}", json={"description": "x" * 2001}).status_code
+        == 422
+    )

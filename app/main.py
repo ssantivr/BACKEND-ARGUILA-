@@ -50,6 +50,24 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Cache-Control": "no-store",
+    "Content-Security-Policy": "frame-ancestors " + " ".join(["'self'", *allowed_origins()]),
+}
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+
+    for name, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(name, value)
+
+    return response
+
+
 app.include_router(auth.router)
 app.include_router(files.router)
 app.include_router(projects.router)
