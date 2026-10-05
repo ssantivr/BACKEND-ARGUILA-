@@ -63,6 +63,6 @@ class TerrainService(ProjectScopedService):
 
     def delete(self, terrain_id: int) -> None:
         terrain = self.get(terrain_id)
-        deleted = snapshot("terrain", terrain.name, terrain)
+        deleted = snapshot("terrain", terrain.name, terrain, ("points",))
         self.terrains.delete(terrain)
         undo_history.record(deleted)

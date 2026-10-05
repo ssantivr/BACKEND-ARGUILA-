@@ -4,6 +4,7 @@ import time
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 
 from app.api import (
     auth,
@@ -131,6 +132,16 @@ def handle_not_found(request: Request, error: NotFoundError) -> JSONResponse:
 @app.exception_handler(ConflictError)
 def handle_conflict(request: Request, error: ConflictError) -> JSONResponse:
     return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(error)})
+
+
+@app.exception_handler(IntegrityError)
+def handle_integrity_error(request: Request, error: IntegrityError) -> JSONResponse:
+    logger.warning("integrity_conflict", extra={"path": request.url.path})
+
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": "The change conflicts with existing data"},
+    )
 
 
 @app.exception_handler(UnsupportedFileError)

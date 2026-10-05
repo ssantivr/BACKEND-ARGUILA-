@@ -36,6 +36,9 @@ class UndoService(ProjectScopedService):
 
         instance = deleted.model(**values)
 
+        for name, rows in deleted.children.items():
+            setattr(instance, name, [model(**row) for model, row in rows])
+
         try:
             self.session.add(instance)
             self.session.commit()
@@ -60,11 +63,11 @@ class UndoService(ProjectScopedService):
 
         instance = self.session.get(restored.deleted.model, restored.restored_id)
 
-        if instance is None:
+        if instance is None or instance.project_id != project_id:
             raise NotFoundError("Nothing to redo")
 
         label = getattr(instance, "name", None) or instance.title
-        deleted = snapshot(restored.deleted.kind, label, instance)
+        deleted = snapshot(restored.deleted.kind, label, instance, restored.deleted.children)
         self.session.delete(instance)
         self.session.commit()
         undo_history.record(deleted, keep_redo=True)

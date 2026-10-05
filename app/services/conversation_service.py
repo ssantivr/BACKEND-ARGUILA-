@@ -109,11 +109,12 @@ class ConversationService(ProjectScopedService):
         assistant: Assistant | None,
     ) -> tuple[str, str]:
         if assistant is not None:
+            system = SYSTEM_PROMPT.format(project_data=self._project_data(project))
+            context = build_context(conversation.messages, content)
+            self.session.commit()
+
             try:
-                reply = assistant.reply(
-                    SYSTEM_PROMPT.format(project_data=self._project_data(project)),
-                    build_context(conversation.messages, content),
-                )
+                reply = assistant.reply(system, context)
             except AIUnavailableError as error:
                 logger.warning("assistant_fallback", extra={"reason": str(error)})
             else:

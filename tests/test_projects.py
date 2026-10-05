@@ -85,3 +85,16 @@ def test_description_over_the_length_limit_is_rejected(client, user):
     assert (
         client.patch(f"/projects/{project_id}", json={"description": "x" * 2001}).status_code == 422
     )
+
+
+def test_creating_the_same_name_at_once_is_a_conflict(client, monkeypatch):
+    register(client)
+    client.post("/projects", json={"name": "Demo House"})
+    monkeypatch.setattr(
+        "app.repositories.project_repository.ProjectRepository.get_by_owner_and_name",
+        lambda self, owner_id, name: None,
+    )
+
+    response = client.post("/projects", json={"name": "Demo House"})
+
+    assert response.status_code == 409

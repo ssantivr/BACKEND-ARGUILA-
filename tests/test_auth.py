@@ -59,6 +59,21 @@ def test_duplicate_email_is_rejected_ignoring_case(client):
     assert response.status_code == 409
 
 
+def test_registering_the_same_email_at_once_is_a_conflict(client, monkeypatch):
+    register(client)
+    monkeypatch.setattr(
+        "app.repositories.user_repository.UserRepository.get_by_email",
+        lambda self, email: None,
+    )
+
+    response = client.post(
+        "/auth/register",
+        json={"name": "Other", "email": "ana@example.com", "password": PASSWORD},
+    )
+
+    assert response.status_code == 409
+
+
 def test_login_and_logout(client):
     user = register(client)
 

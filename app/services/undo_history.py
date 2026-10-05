@@ -1,6 +1,9 @@
-from dataclasses import dataclass
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 from threading import Lock
 from typing import Any
+
+from sqlalchemy import Table
 
 from app.data_structures import DoublyLinkedList, Stack
 from app.database import Base
@@ -15,13 +18,26 @@ class DeletedRecord:
     label: str
     model: type[Base]
     values: dict[str, Any]
+    children: dict[str, list[tuple[type[Base], dict[str, Any]]]] = field(default_factory=dict)
 
 
-def snapshot(kind: str, label: str, instance: Base) -> DeletedRecord:
-    values = {
+def column_values(instance: Base, parent: Table | None = None) -> dict[str, Any]:
+    return {
         column.name: getattr(instance, column.name)
         for column in instance.__table__.columns
         if not column.primary_key
+        and not any(key.column.table is parent for key in column.foreign_keys)
+    }
+
+
+def snapshot(kind: str, label: str, instance: Base, include: Iterable[str] = ()) -> DeletedRecord:
+    values = column_values(instance)
+    children = {
+        name: [
+            (type(child), column_values(child, instance.__table__))
+            for child in getattr(instance, name)
+        ]
+        for name in include
     }
 
     return DeletedRecord(
@@ -30,6 +46,7 @@ def snapshot(kind: str, label: str, instance: Base) -> DeletedRecord:
         label=label,
         model=type(instance),
         values=values,
+        children=children,
     )
 
 

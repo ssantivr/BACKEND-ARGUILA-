@@ -1,6 +1,8 @@
 import os
+import smtplib
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import security
@@ -43,13 +45,17 @@ class AuthService:
         if self.users.get_by_email(email) is not None:
             raise ConflictError("Email is already registered")
 
-        user = self.users.add(
-            User(
-                name=data.name.strip(),
-                email=email,
-                password_hash=security.hash_password(data.password),
+        try:
+            user = self.users.add(
+                User(
+                    name=data.name.strip(),
+                    email=email,
+                    password_hash=security.hash_password(data.password),
+                )
             )
-        )
+        except IntegrityError:
+            self.users.session.rollback()
+            raise ConflictError("Email is already registered") from None
 
         return user, self._start_session(user)
 
@@ -103,13 +109,17 @@ class AuthService:
         )
 
         app_url = os.environ.get("APP_URL", "http://localhost:5173").rstrip("/")
-        mailer.send(
-            user.email,
-            "Restablecer tu contraseña de ARQUILA",
-            "Para elegir una contraseña nueva abre este enlace, válido durante 30 minutos:\n\n"
-            f"{app_url}/?reset_token={token}\n\n"
-            "Si no lo pediste, ignora este mensaje.",
-        )
+
+        try:
+            mailer.send(
+                user.email,
+                "Restablecer tu contraseña de ARQUILA",
+                "Para elegir una contraseña nueva abre este enlace, válido durante 30 minutos:\n\n"
+                f"{app_url}/?reset_token={token}\n\n"
+                "Si no lo pediste, ignora este mensaje.",
+            )
+        except (smtplib.SMTPException, OSError):
+            logger.exception("password_reset_mail_failed", extra={"user_id": user.id})
 
     def reset_password(self, token: str, password: str) -> None:
         reset = self.resets.get_by_token_hash(security.hash_session_token(token))

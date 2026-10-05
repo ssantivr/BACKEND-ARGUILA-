@@ -50,7 +50,7 @@ class PlanService(ProjectScopedService):
 
     def delete(self, plan_id: int) -> None:
         plan = self.get(plan_id)
-        deleted = snapshot("plan", plan.title, plan)
+        deleted = snapshot("plan", plan.title, plan, ("rooms", "components"))
         self.plans.delete(plan)
         undo_history.record(deleted)
 

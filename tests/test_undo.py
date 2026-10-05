@@ -183,3 +183,40 @@ def test_history_drops_the_oldest_entry_when_full():
     assert undo_history.pop_last(1).label == "b"
     assert undo_history.pop_last(1) is None
     assert undo_history.pop_last(2) is None
+
+
+TRIANGLE = [{"x_m": 0, "y_m": 0}, {"x_m": 20, "y_m": 0}, {"x_m": 20, "y_m": 10}]
+
+
+def test_undo_restores_the_vertices_of_a_terrain(client, project_id):
+    terrain = add(
+        client, project_id, "terrains", {"name": "Lot", "area_m2": 100, "points": TRIANGLE}
+    )
+    client.delete(f"/terrains/{terrain['id']}")
+
+    assert undo(client, project_id).status_code == 200
+
+    [restored] = client.get(f"/projects/{project_id}/terrains").json()
+    assert [(p["x_m"], p["y_m"]) for p in restored["points"]] == [(0, 0), (20, 0), (20, 10)]
+
+
+def test_undo_and_redo_keep_the_rooms_and_components_of_a_plan(client, project_id):
+    plan = add(client, project_id, "plans", {"title": "Ground"})
+    place = {"plan_id": plan["id"], "x_m": 0, "y_m": 0, "width_m": 4, "depth_m": 3}
+    add(client, project_id, "rooms", {"name": "Kitchen", **place})
+    add(client, project_id, "components", {"name": "C1", "kind": "column", "height_m": 3, **place})
+
+    def names(resource):
+        return [item["name"] for item in client.get(f"/projects/{project_id}/{resource}").json()]
+
+    client.delete(f"/plans/{plan['id']}")
+    assert names("rooms") == []
+
+    assert undo(client, project_id).status_code == 200
+    assert names("rooms") == ["Kitchen"]
+    assert names("components") == ["C1"]
+
+    assert redo(client, project_id).status_code == 200
+    assert undo(client, project_id).status_code == 200
+    assert names("rooms") == ["Kitchen"]
+    assert names("components") == ["C1"]

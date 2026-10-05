@@ -131,3 +131,14 @@ def test_reset_requests_are_limited_per_email(client, mailer, monkeypatch):
     clock[0] += login_limiter.RESET_WINDOW_SECONDS + 1
     request_reset(client)
     assert len(mailer.sent) == login_limiter.MAX_RESET_REQUESTS + 2
+
+
+def test_a_mail_failure_gets_the_same_answer_as_a_sent_mail(client):
+    class BrokenMailer:
+        def send(self, recipient, subject, body):
+            raise ConnectionRefusedError("mail server is down")
+
+    app.dependency_overrides[get_mailer] = lambda: BrokenMailer()
+    register(client)
+
+    assert request_reset(client).status_code == 204
