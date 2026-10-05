@@ -119,11 +119,7 @@ def test_rules_answer_when_the_assistant_fails(client, conversation_id, assistan
     assert len(client.get(f"/conversations/{conversation_id}").json()["messages"]) == 2
 
 
-def test_rules_answer_when_the_assistant_is_not_configured(
-    client, project_id, conversation_id, monkeypatch
-):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+def test_rules_answer_when_the_assistant_is_not_configured(client, project_id, conversation_id):
     client.post(
         f"/projects/{project_id}/terrains",
         json={
@@ -184,19 +180,12 @@ def test_requires_authentication(client):
     assert client.post("/conversations/1/messages", json={"content": "hi"}).status_code == 401
 
 
-def test_assistant_status_reports_who_answers(client, monkeypatch):
+def test_assistant_status_reports_who_answers(client):
     assert client.get("/assistant/status").status_code == 401
 
     register(client)
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
 
     assert client.get("/assistant/status").json() == {"provider": "rules", "model": None}
-
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-
-    status = client.get("/assistant/status").json()
-    assert status["provider"] == "claude" and status["model"]
 
 
 def test_the_database_is_released_while_the_assistant_answers(client, conversation_id, assistant):

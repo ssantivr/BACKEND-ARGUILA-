@@ -398,7 +398,7 @@ class ConversationRead(BaseModel):
 
 
 class AssistantStatus(BaseModel):
-    provider: Literal["claude", "ollama", "rules"]
+    provider: Literal["ollama", "rules"]
     model: str | None
 
 

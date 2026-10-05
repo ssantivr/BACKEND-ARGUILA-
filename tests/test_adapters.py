@@ -1,7 +1,5 @@
 import json
-from types import SimpleNamespace
 
-import anthropic
 import httpx
 import pytest
 
@@ -83,82 +81,6 @@ def test_smtp_mailer_skips_login_without_a_user(monkeypatch, smtp):
     assert [call for call in smtp.instances[0].calls if call[0] == "login"] == []
 
 
-class FakeMessages:
-    def __init__(self, result):
-        self.result = result
-        self.requests = []
-
-    def create(self, **request):
-        self.requests.append(request)
-
-        if isinstance(self.result, Exception):
-            raise self.result
-
-        return self.result
-
-
-def claude_assistant(result):
-    assistant = ai.ClaudeAssistant.__new__(ai.ClaudeAssistant)
-    messages = FakeMessages(result)
-    assistant._client = SimpleNamespace(beta=SimpleNamespace(messages=messages))
-    return assistant, messages
-
-
-def response(stop_reason, *blocks):
-    return SimpleNamespace(stop_reason=stop_reason, content=list(blocks))
-
-
-def text(value):
-    return SimpleNamespace(type="text", text=value)
-
-
-def test_claude_assistant_returns_only_the_text_blocks():
-    assistant, messages = claude_assistant(
-        response(
-            "end_turn",
-            SimpleNamespace(type="thinking", thinking=""),
-            text("Hola. "),
-            text("Listo."),
-        )
-    )
-
-    reply = assistant.reply("system prompt", [{"role": "user", "content": "hola"}])
-
-    assert reply == "Hola. Listo."
-    [request] = messages.requests
-    assert request["model"] == ai.MODEL
-    assert request["system"] == "system prompt"
-    assert request["messages"] == [{"role": "user", "content": "hola"}]
-
-
-def test_claude_assistant_handles_refusals_and_empty_answers():
-    refused, _ = claude_assistant(response("refusal", text("partial")))
-    empty, _ = claude_assistant(response("end_turn"))
-
-    assert refused.reply("s", []) == ai.REFUSAL_REPLY
-    assert empty.reply("s", []) == ai.EMPTY_REPLY
-
-
-def test_claude_assistant_turns_sdk_errors_into_the_application_error():
-    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
-    failures = [
-        anthropic.APIConnectionError(request=request),
-        anthropic.RateLimitError("busy", response=httpx.Response(429, request=request), body=None),
-        anthropic.AuthenticationError(
-            "bad key", response=httpx.Response(401, request=request), body=None
-        ),
-        anthropic.InternalServerError(
-            "down", response=httpx.Response(500, request=request), body=None
-        ),
-    ]
-
-    for failure in failures:
-        assistant, _ = claude_assistant(failure)
-
-        with pytest.raises(AIUnavailableError):
-            assistant.reply("s", [])
-
-
 def ollama_assistant(handler):
     return ai.OllamaAssistant(httpx.Client(transport=httpx.MockTransport(handler)))
 
@@ -224,10 +146,7 @@ def test_ollama_assistant_turns_failures_into_the_application_error(monkeypatch)
             ollama_assistant(handler).reply("s", [])
 
 
-def test_local_assistant_is_chosen_without_an_api_key(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
-
+def test_local_assistant_is_chosen():
     assert isinstance(ai.get_assistant(), ai.OllamaAssistant)
 
 
@@ -276,23 +195,6 @@ def test_ollama_assistant_stops_retrying_for_a_while_after_a_failed_connection(m
         assistant.reply("s", [])
 
     assert len(attempts) == 2
-
-
-def test_claude_assistant_is_created_with_a_request_timeout(monkeypatch):
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
-
-    client = ai.ClaudeAssistant()._client
-
-    assert client.timeout == ai.REQUEST_TIMEOUT_SECONDS
-    assert client.max_retries == 1
-
-
-def test_claude_assistant_turns_a_timeout_into_the_application_error():
-    request = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
-    assistant, _ = claude_assistant(anthropic.APITimeoutError(request=request))
-
-    with pytest.raises(AIUnavailableError, match="Could not reach"):
-        assistant.reply("s", [])
 
 
 def test_ollama_assistant_has_connect_and_read_timeouts():
