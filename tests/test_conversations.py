@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.ai import get_optional_assistant
+from app.database import get_session
 from app.errors import AIUnavailableError
 from app.main import app
 from tests.helpers import register
@@ -196,3 +197,24 @@ def test_assistant_status_reports_who_answers(client, monkeypatch):
 
     status = client.get("/assistant/status").json()
     assert status["provider"] == "claude" and status["model"]
+
+
+def test_the_database_is_released_while_the_assistant_answers(client, conversation_id, assistant):
+    opened = []
+    provide_session = app.dependency_overrides[get_session]
+    in_transaction = []
+
+    def tracked_session():
+        for session in provide_session():
+            opened.append(session)
+            yield session
+
+    def reply(system, messages):
+        in_transaction.append(opened[-1].in_transaction())
+        return "ok"
+
+    app.dependency_overrides[get_session] = tracked_session
+    assistant.reply = reply
+
+    assert send(client, conversation_id).status_code == 201
+    assert in_transaction == [False]
