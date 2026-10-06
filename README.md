@@ -138,3 +138,10 @@ ruff check app tests
 ```
 
 `pytest` usa SQLite en memoria. Para ejecutarlo contra PostgreSQL, definir `TEST_DATABASE_URL` con una base cuyo nombre termine en `test` (se vacía antes de cada prueba).
+
+## Documentación
+
+- `docs/BACKEND_Y_API.md`: decisiones del backend y de la interfaz (autenticación, seguridad, registro de eventos, archivos, terreno, IA).
+- La documentación general del proyecto (requerimientos, estructuras de datos, complejidad, pruebas) está en el repositorio [ARQUILA](https://github.com/ssantivr/ARQUILA).
+
+Para que Ruff formatee los archivos antes de cada commit, activar los hooks una vez con `pre-commit install`.
