@@ -351,7 +351,7 @@ class StructureRead(BaseModel):
 class DeletedItemRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    kind: Literal["terrain", "material", "plan", "elevation"]
+    kind: Literal["terrain", "material", "plan", "elevation", "room", "component"]
     label: str
 
 

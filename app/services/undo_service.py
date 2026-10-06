@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy.exc import IntegrityError
 
 from app.errors import ConflictError, NotFoundError
-from app.models import File
+from app.models import File, Plan
 from app.services.base import ProjectScopedService
 from app.services.undo_history import (
     DeletedRecord,
@@ -33,6 +33,9 @@ class UndoService(ProjectScopedService):
             self.session.get(File, values["file_id"]) is None
         ):
             values["file_id"] = None
+
+        if values.get("plan_id") is not None and self.session.get(Plan, values["plan_id"]) is None:
+            raise ConflictError(f'Cannot restore "{deleted.label}": its plan no longer exists')
 
         instance = deleted.model(**values)
 

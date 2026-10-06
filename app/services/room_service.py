@@ -6,6 +6,7 @@ from app.repositories.plan_repository import PlanRepository
 from app.repositories.room_repository import RoomRepository
 from app.schemas import RoomCreate, RoomUpdate
 from app.services.base import ProjectScopedService
+from app.services.undo_history import snapshot, undo_history
 
 
 class RoomService(ProjectScopedService):
@@ -50,7 +51,10 @@ class RoomService(ProjectScopedService):
         return self.rooms.save(room)
 
     def delete(self, room_id: int) -> None:
-        self.rooms.delete(self.get(room_id))
+        room = self.get(room_id)
+        deleted = snapshot("room", room.name, room)
+        self.rooms.delete(room)
+        undo_history.record(deleted, session=self.session)
 
     def _ensure_plan_in_project(self, plan_id: int, project_id: int) -> None:
         plan = self.plans.get(plan_id)

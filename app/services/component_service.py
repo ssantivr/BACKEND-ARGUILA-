@@ -6,6 +6,7 @@ from app.repositories.component_repository import ComponentRepository
 from app.repositories.plan_repository import PlanRepository
 from app.schemas import ComponentCreate, ComponentUpdate
 from app.services.base import ProjectScopedService
+from app.services.undo_history import snapshot, undo_history
 
 
 class ComponentService(ProjectScopedService):
@@ -50,7 +51,10 @@ class ComponentService(ProjectScopedService):
         return self.components.save(component)
 
     def delete(self, component_id: int) -> None:
-        self.components.delete(self.get(component_id))
+        component = self.get(component_id)
+        deleted = snapshot("component", component.name, component)
+        self.components.delete(component)
+        undo_history.record(deleted, session=self.session)
 
     def _ensure_plan_in_project(self, plan_id: int, project_id: int) -> None:
         plan = self.plans.get(plan_id)

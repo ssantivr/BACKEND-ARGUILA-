@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.undo_history import DeletedRecord, UndoHistory
+from app.services.undo_history import DeletedRecord, UndoHistory, undo_history
 from tests.helpers import register
 
 
@@ -220,3 +220,55 @@ def test_undo_and_redo_keep_the_rooms_and_components_of_a_plan(client, project_i
     assert undo(client, project_id).status_code == 200
     assert names("rooms") == ["Kitchen"]
     assert names("components") == ["C1"]
+
+
+def test_undo_restores_a_deleted_room_and_a_deleted_component(client, project_id):
+    plan = add(client, project_id, "plans", {"title": "Ground"})
+    place = {"plan_id": plan["id"], "x_m": 1.5, "y_m": 2, "width_m": 4, "depth_m": 3}
+    room = add(client, project_id, "rooms", {"name": "Kitchen", **place})
+    column = add(
+        client, project_id, "components", {"name": "C1", "kind": "column", "height_m": 3, **place}
+    )
+
+    assert client.delete(f"/rooms/{room['id']}").status_code == 204
+    assert client.delete(f"/components/{column['id']}").status_code == 204
+    assert history(client, project_id) == [
+        {"kind": "component", "label": "C1"},
+        {"kind": "room", "label": "Kitchen"},
+    ]
+
+    assert undo(client, project_id).json() == {"kind": "component", "label": "C1"}
+    assert undo(client, project_id).json() == {"kind": "room", "label": "Kitchen"}
+
+    [restored_room] = client.get(f"/projects/{project_id}/rooms").json()
+    [restored_column] = client.get(f"/projects/{project_id}/components").json()
+
+    for field in ("name", "plan_id", "x_m", "y_m", "width_m", "depth_m"):
+        assert restored_room[field] == room[field]
+        assert restored_column[field] == column[field]
+
+    assert restored_column["kind"] == "column"
+    assert restored_column["height_m"] == column["height_m"]
+
+    assert redo(client, project_id).json() == {"kind": "room", "label": "Kitchen"}
+    assert client.get(f"/projects/{project_id}/rooms").json() == []
+
+
+def test_a_room_whose_plan_is_gone_is_dropped_from_the_history(client, project_id):
+    material = add_material(client, project_id)
+    plan = add(client, project_id, "plans", {"title": "Ground"})
+    place = {"plan_id": plan["id"], "x_m": 0, "y_m": 0, "width_m": 4, "depth_m": 3}
+    room = add(client, project_id, "rooms", {"name": "Kitchen", **place})
+
+    client.delete(f"/materials/{material['id']}")
+    client.delete(f"/rooms/{room['id']}")
+    client.delete(f"/plans/{plan['id']}")
+
+    assert undo_history.pop_last(project_id).kind == "plan"
+
+    response = undo(client, project_id)
+    assert response.status_code == 409
+    assert "plan no longer exists" in response.json()["detail"]
+    assert client.get(f"/projects/{project_id}/rooms").json() == []
+
+    assert undo(client, project_id).json()["kind"] == "material"
