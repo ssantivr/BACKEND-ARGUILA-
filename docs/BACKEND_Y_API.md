@@ -83,10 +83,11 @@ Todo lo que pertenece a un proyecto exige sesión y que el proyecto sea del usua
 
 ## Deshacer eliminaciones
 
-- Se guarda un historial por proyecto de los terrenos, planos, elevaciones y materiales eliminados, con un máximo de 20 entradas.
+- Se guarda un historial por proyecto de los terrenos, planos, elevaciones, materiales, cuartos y componentes estructurales eliminados, con un máximo de 20 entradas.
+- Un cuarto o un componente pertenece a un plano. Si su plano ya no existe al restaurarlo, se responde 409 y la entrada se descarta, para que no bloquee las anteriores: un plano restaurado tiene otro identificador, así que esa entrada ya no se podría recuperar nunca.
 - El historial usa la lista doblemente enlazada de `app/data_structures` (ver `05_COMPLEJIDAD.md`).
 - Por defecto vive en memoria: se pierde al reiniciar el servidor y no se comparte entre varios procesos.
-- Con `STATE_STORAGE=database` el historial se guarda además en la tabla `runtime_state`, una fila por proyecto con su contenido en JSON. En cada operación se carga de la base a la lista doblemente enlazada y a la pila, se opera sobre ellas igual que en memoria y se vuelve a guardar. Las estructuras siguen siendo las que deciden qué se deshace y qué se rehace; la base solo conserva su contenido entre peticiones. Existe para alojamientos como Vercel, donde cada petición puede caer en un proceso distinto.
+- Con `STATE_STORAGE=database` el historial se guarda además en la tabla `runtime_state`, una fila por proyecto con su contenido en JSON. En cada operación se carga de la base a la lista doblemente enlazada y a la pila, se opera sobre ellas igual que en memoria y se vuelve a guardar. Las estructuras siguen siendo las que deciden qué se deshace y qué se rehace; la base solo conserva su contenido entre peticiones. Existe para alojamientos como Vercel, donde cada petición puede caer en un proceso distinto. La fila se lee con bloqueo (`SELECT ... FOR UPDATE`), de modo que dos peticiones simultáneas sobre el mismo proyecto o el mismo correo esperan su turno en lugar de pisarse; SQLite, que se usa en las pruebas, ignora ese bloqueo.
 - Al restaurar se inserta una fila nueva con los mismos datos; el identificador cambia porque el anterior pudo haberse reutilizado.
 - Si al restaurar hay un conflicto (por ejemplo, ya existe un material con ese nombre), se responde 409 y la entrada se conserva.
 - Si el archivo adjunto de un plano ya no existe, el plano se restaura sin archivo.
