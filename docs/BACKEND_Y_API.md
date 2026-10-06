@@ -85,7 +85,8 @@ Todo lo que pertenece a un proyecto exige sesión y que el proyecto sea del usua
 
 - Se guarda un historial por proyecto de los terrenos, planos, elevaciones y materiales eliminados, con un máximo de 20 entradas.
 - El historial usa la lista doblemente enlazada de `app/data_structures` (ver `05_COMPLEJIDAD.md`).
-- Vive en memoria: se pierde al reiniciar el servidor y no se comparte entre varios procesos.
+- Por defecto vive en memoria: se pierde al reiniciar el servidor y no se comparte entre varios procesos.
+- Con `STATE_STORAGE=database` el historial se guarda además en la tabla `runtime_state`, una fila por proyecto con su contenido en JSON. En cada operación se carga de la base a la lista doblemente enlazada y a la pila, se opera sobre ellas igual que en memoria y se vuelve a guardar. Las estructuras siguen siendo las que deciden qué se deshace y qué se rehace; la base solo conserva su contenido entre peticiones. Existe para alojamientos como Vercel, donde cada petición puede caer en un proceso distinto.
 - Al restaurar se inserta una fila nueva con los mismos datos; el identificador cambia porque el anterior pudo haberse reutilizado.
 - Si al restaurar hay un conflicto (por ejemplo, ya existe un material con ese nombre), se responde 409 y la entrada se conserva.
 - Si el archivo adjunto de un plano ya no existe, el plano se restaura sin archivo.
@@ -246,7 +247,7 @@ No se registran contraseñas, correos, cookies ni los parámetros de la direcci�
 
 ### Limitaciones conocidas
 
-- El límite de intentos de inicio de sesión se cuenta por correo, no por dirección IP, y vive en memoria: se reinicia al reiniciar el servidor y no se comparte entre varios procesos.
+- El límite de intentos de inicio de sesión se cuenta por correo, no por dirección IP, y por defecto vive en memoria: se reinicia al reiniciar el servidor y no se comparte entre varios procesos (con `STATE_STORAGE=database` los intentos se guardan en la tabla `runtime_state` y la cola se reconstruye en cada petición).
 - El registro no tiene límite de solicitudes y responde que un correo ya está registrado, así que permite averiguar si un correo tiene cuenta.
 - La documentación automática de la API (`/docs`) queda accesible sin sesión. No muestra datos, solo la lista de operaciones.
 - No hay un límite de archivos por proyecto, solo de tamaño por archivo.
@@ -262,6 +263,7 @@ Se pueden definir en la terminal o en el archivo `.env`, que leen `python -m app
 | `DATABASE_DIR` | Carpeta del repositorio `BASE-DE-DATOS-ARQUILA`, de donde salen las migraciones (por defecto la carpeta hermana `../BASE-DE-DATOS-ARQUILA`). |
 | `API_HOST`, `API_PORT` | Dirección y puerto en los que escucha la API (por defecto `127.0.0.1` y `8000`). |
 | `UPLOAD_DIR` | Carpeta de archivos subidos (por defecto `uploads`). |
+| `STATE_STORAGE` | `memory` (por defecto) guarda en memoria el historial de «Deshacer» y los límites de intentos; `database` los guarda en la tabla `runtime_state`. |
 | `FILE_STORAGE` | `disk` (por defecto) guarda los archivos en `UPLOAD_DIR`; `database` los guarda en la tabla `file_contents`. |
 | `COOKIE_SECURE` | `1` para exigir HTTPS en la cookie de sesión. |
 | `COOKIE_SAMESITE` | `lax`, `strict` o `none` (por defecto `lax`). `none` permite usar la sesión desde otro sitio y obliga a HTTPS. |

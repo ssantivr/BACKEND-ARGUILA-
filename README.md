@@ -48,6 +48,7 @@ Copiar `.env.example` a `.env` y completarlo. El archivo `.env` no se sube al re
 | `API_HOST` | Dirección en la que escucha la API. | `127.0.0.1` |
 | `API_PORT` | Puerto de la API. | `8000` |
 | `UPLOAD_DIR` | Carpeta de los archivos subidos. | `uploads` |
+| `STATE_STORAGE` | `memory` guarda en memoria el historial de «Deshacer» y los límites de intentos; `database` los guarda en PostgreSQL. | `memory` |
 | `FILE_STORAGE` | `disk` guarda los archivos en `UPLOAD_DIR`; `database` los guarda en PostgreSQL. | `disk` |
 | `COOKIE_SECURE` | `1` para enviar la cookie de sesión solo por HTTPS. | `0` |
 | `COOKIE_SAMESITE` | `lax`, `strict` o `none`. Usar `none` solo si la interfaz está en otro sitio; obliga a HTTPS. | `lax` |
@@ -94,7 +95,7 @@ Lee `.env`, aplica las migraciones pendientes y arranca la API en `http://127.0.
 - Poner `API_HOST=0.0.0.0` para aceptar conexiones de fuera, detrás de un servidor que dé HTTPS.
 - Definir `COOKIE_SECURE=1` y poner la dirección pública de la interfaz en `APP_URL`.
 - Apuntar `UPLOAD_DIR` a una carpeta que se conserve entre despliegues, o poner `FILE_STORAGE=database` si no hay ninguna.
-- Ejecutar una sola instancia: los límites de intentos de inicio de sesión y el historial de «Deshacer» viven en memoria.
+- Ejecutar una sola instancia, o poner `STATE_STORAGE=database`: sin esa variable, los límites de intentos de inicio de sesión y el historial de «Deshacer» viven en memoria.
 
 ### En Vercel
 
@@ -102,10 +103,10 @@ La API está publicada en <https://arquila-backend.vercel.app> y la interfaz en 
 
 - Vercel detecta FastAPI a partir de `app/main.py` y `requirements.txt`; no hace falta configuración.
 - La base es un PostgreSQL de Neon creado desde el Marketplace de Vercel, que deja `DATABASE_URL` en el proyecto. El backend acepta la forma `postgresql://` que entrega Neon.
-- Variables del proyecto: `COOKIE_SECURE=1`, `APP_URL` con la dirección de la interfaz y `FILE_STORAGE=database`, porque en Vercel el disco no se conserva.
+- Variables del proyecto: `COOKIE_SECURE=1`, `APP_URL` con la dirección de la interfaz, y `FILE_STORAGE=database` y `STATE_STORAGE=database`, porque en Vercel ni el disco ni la memoria se conservan entre peticiones.
 - Las migraciones no se aplican solas. Se ejecutan desde un equipo con `python -m app.migrate`, poniendo en `DATABASE_URL` la dirección de la base de Vercel.
 
-Limitaciones de este despliegue: Vercel no acepta peticiones de más de 4,5 MB, así que ese es el tamaño máximo de un archivo subido, aunque el backend admita 20 MB; el historial de «Deshacer» y los límites de intentos viven en memoria y pueden no conservarse entre peticiones; y el asistente responde con las reglas fijas, porque no hay un Ollama al que conectarse.
+Limitaciones de este despliegue: Vercel no acepta peticiones de más de 4,5 MB, así que ese es el tamaño máximo de un archivo subido, aunque el backend admita 20 MB; y el asistente responde con las reglas fijas, porque no hay un Ollama al que conectarse.
 
 ## Endpoints principales
 
