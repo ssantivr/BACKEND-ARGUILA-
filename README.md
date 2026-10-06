@@ -95,6 +95,17 @@ Lee `.env`, aplica las migraciones pendientes y arranca la API en `http://127.0.
 - Apuntar `UPLOAD_DIR` a una carpeta que se conserve entre despliegues.
 - Ejecutar una sola instancia: los límites de intentos de inicio de sesión y el historial de «Deshacer» viven en memoria.
 
+### En Vercel
+
+La API está publicada en <https://arquila-backend.vercel.app> y la interfaz en <https://arquila-frontend.vercel.app>.
+
+- Vercel detecta FastAPI a partir de `app/main.py` y `requirements.txt`; no hace falta configuración.
+- La base es un PostgreSQL de Neon creado desde el Marketplace de Vercel, que deja `DATABASE_URL` en el proyecto. El backend acepta la forma `postgresql://` que entrega Neon.
+- Variables del proyecto: `COOKIE_SECURE=1`, `APP_URL` con la dirección de la interfaz y `UPLOAD_DIR=/tmp/uploads`.
+- Las migraciones no se aplican solas. Se ejecutan desde un equipo con `python -m app.migrate`, poniendo en `DATABASE_URL` la dirección de la base de Vercel.
+
+Limitaciones de este despliegue: los archivos subidos se guardan en una carpeta temporal y se pierden; el historial de «Deshacer» y los límites de intentos viven en memoria y pueden no conservarse entre peticiones; y el asistente responde con las reglas fijas, porque no hay un Ollama al que conectarse.
+
 ## Endpoints principales
 
 La sesión viaja en una cookie `HttpOnly`. Las rutas con datos de proyectos requieren sesión iniciada.
