@@ -3,7 +3,7 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app import migrate
-from app.migrate import MIGRATIONS_DIR, apply_migrations
+from app.migrate import apply_migrations, migrations_dir
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def test_failed_migration_is_not_recorded_and_stops_the_run(engine, tmp_path):
 
 
 def test_project_migrations_are_numbered_without_gaps():
-    names = sorted(path.name for path in MIGRATIONS_DIR.glob("*.sql"))
+    names = sorted(path.name for path in migrations_dir().glob("*.sql"))
     numbers = [int(name.split("_")[0]) for name in names]
 
     assert names, "there must be at least the initial migration"
@@ -71,8 +71,7 @@ def test_command_reads_the_database_url_from_the_env_file(tmp_path, monkeypatch,
 
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setattr(migrate, "ENV_FILE", env_file)
-    monkeypatch.setattr(migrate, "MIGRATIONS_DIR", migrations)
-    monkeypatch.setattr(migrate, "SEED_FILE", seed)
+    monkeypatch.setenv("DATABASE_DIR", str(tmp_path))
     monkeypatch.setattr(migrate.sys, "argv", ["migrate", "--seed"])
     migrate.get_engine.cache_clear()
 
@@ -95,5 +94,5 @@ def test_command_stops_with_a_clear_message_without_a_database_url(tmp_path, mon
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setattr(migrate, "ENV_FILE", tmp_path / "missing.env")
 
-    with pytest.raises(SystemExit, match="backend/.env"):
+    with pytest.raises(SystemExit, match=".env"):
         migrate.main()

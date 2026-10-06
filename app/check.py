@@ -27,7 +27,7 @@ def check_mailer(recipient: str) -> tuple[bool, str]:
     mailer = get_mailer()
 
     if isinstance(mailer, ConsoleMailer):
-        return False, "Mail is not configured: set SMTP_HOST in backend/.env"
+        return False, "Mail is not configured: set SMTP_HOST in .env"
 
     try:
         mailer.send(recipient, MAIL_SUBJECT, MAIL_BODY)
