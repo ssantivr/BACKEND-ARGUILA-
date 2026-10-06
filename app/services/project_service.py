@@ -54,7 +54,7 @@ class ProjectService:
         stored_names = [file.storage_path for file in project.files]
 
         self.projects.delete(project)
-        undo_history.forget(project_id)
+        undo_history.forget(project_id, self.projects.session)
 
         for stored_name in stored_names:
             storage.remove(stored_name)

@@ -54,7 +54,7 @@ class ElevationService(ProjectScopedService):
         elevation = self.get(elevation_id)
         deleted = snapshot("elevation", elevation.title, elevation)
         self.elevations.delete(elevation)
-        undo_history.record(deleted)
+        undo_history.record(deleted, session=self.session)
 
     def _ensure_file_in_project(self, file_id: int | None, project_id: int) -> None:
         if file_id is not None and self.files.get_in_project(file_id, project_id) is None:

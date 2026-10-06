@@ -52,7 +52,7 @@ class MaterialService(ProjectScopedService):
         material = self.get(material_id)
         deleted = snapshot("material", material.name, material)
         self.materials.delete(material)
-        undo_history.record(deleted)
+        undo_history.record(deleted, session=self.session)
 
     def _ensure_name_is_free(self, project_id: int, name: str) -> None:
         if self.materials.get_by_project_and_name(project_id, name) is not None:

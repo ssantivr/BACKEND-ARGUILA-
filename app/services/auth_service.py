@@ -62,7 +62,7 @@ class AuthService:
     def login(self, data: LoginRequest) -> tuple[User, str]:
         email = normalize_email(data.email)
 
-        if login_limiter.is_blocked(email):
+        if login_limiter.is_blocked(email, self.users.session):
             logger.warning("login_blocked")
             raise TooManyAttemptsError("Too many failed attempts, try again in a minute")
 
@@ -70,11 +70,11 @@ class AuthService:
         stored = user.password_hash if user else security.DUMMY_PASSWORD_HASH
 
         if not security.verify_password(data.password, stored) or user is None:
-            login_limiter.record_failure(email)
+            login_limiter.record_failure(email, self.users.session)
             logger.warning("login_failed")
             raise AuthenticationError("Invalid email or password")
 
-        login_limiter.reset(email)
+        login_limiter.reset(email, self.users.session)
 
         if security.needs_rehash(user.password_hash):
             user.password_hash = security.hash_password(data.password)
@@ -86,10 +86,10 @@ class AuthService:
     def request_password_reset(self, email: str, mailer: Mailer) -> None:
         email = normalize_email(email)
 
-        if reset_request_limiter.is_blocked(email):
+        if reset_request_limiter.is_blocked(email, self.users.session):
             return
 
-        reset_request_limiter.record_failure(email)
+        reset_request_limiter.record_failure(email, self.users.session)
         user = self.users.get_by_email(email)
 
         if user is None:
@@ -136,7 +136,7 @@ class AuthService:
         self.users.save(user)
         self.resets.delete_for_user(user.id)
         self.sessions.delete_for_user(user.id)
-        login_limiter.reset(user.email)
+        login_limiter.reset(user.email, self.users.session)
 
     def logout(self, token: str | None) -> None:
         if token:

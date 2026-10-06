@@ -156,6 +156,15 @@ class FileContent(Base):
     data: Mapped[bytes] = mapped_column(LargeBinary)
 
 
+class RuntimeState(Base):
+    __tablename__ = "runtime_state"
+
+    scope: Mapped[str] = mapped_column(String(40), primary_key=True)
+    key: Mapped[str] = mapped_column(String(255), primary_key=True)
+    payload: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
 SURFACE_CHECK = "surface IN ('concrete', 'brick', 'plaster', 'glass', 'steel', 'wood', 'stone')"
 
 

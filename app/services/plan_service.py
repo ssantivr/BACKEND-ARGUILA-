@@ -52,7 +52,7 @@ class PlanService(ProjectScopedService):
         plan = self.get(plan_id)
         deleted = snapshot("plan", plan.title, plan, ("rooms", "components"))
         self.plans.delete(plan)
-        undo_history.record(deleted)
+        undo_history.record(deleted, session=self.session)
 
     def _ensure_file_in_project(self, file_id: int | None, project_id: int) -> None:
         if file_id is not None and self.files.get_in_project(file_id, project_id) is None:

@@ -65,4 +65,4 @@ class TerrainService(ProjectScopedService):
         terrain = self.get(terrain_id)
         deleted = snapshot("terrain", terrain.name, terrain, ("points",))
         self.terrains.delete(terrain)
-        undo_history.record(deleted)
+        undo_history.record(deleted, session=self.session)

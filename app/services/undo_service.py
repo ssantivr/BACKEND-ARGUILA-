@@ -17,12 +17,12 @@ class UndoService(ProjectScopedService):
     def list(self, project_id: int) -> list[DeletedRecord]:
         self._ensure_project_exists(project_id)
 
-        return undo_history.list(project_id)
+        return undo_history.list(project_id, self.session)
 
     def undo_last(self, project_id: int) -> DeletedRecord:
         self._ensure_project_exists(project_id)
 
-        deleted = undo_history.pop_last(project_id)
+        deleted = undo_history.pop_last(project_id, self.session)
 
         if deleted is None:
             raise NotFoundError("Nothing to undo")
@@ -44,19 +44,19 @@ class UndoService(ProjectScopedService):
             self.session.commit()
         except IntegrityError:
             self.session.rollback()
-            undo_history.record(deleted, keep_redo=True)
+            undo_history.record(deleted, keep_redo=True, session=self.session)
             raise ConflictError(
                 f'Cannot restore "{deleted.label}": it conflicts with existing data'
             ) from None
 
-        undo_history.record_restored(RestoredRecord(deleted, instance.id))
+        undo_history.record_restored(RestoredRecord(deleted, instance.id), self.session)
 
         return deleted
 
     def redo_last(self, project_id: int) -> DeletedRecord:
         self._ensure_project_exists(project_id)
 
-        restored = undo_history.pop_restored(project_id)
+        restored = undo_history.pop_restored(project_id, self.session)
 
         if restored is None:
             raise NotFoundError("Nothing to redo")
@@ -70,6 +70,6 @@ class UndoService(ProjectScopedService):
         deleted = snapshot(restored.deleted.kind, label, instance, restored.deleted.children)
         self.session.delete(instance)
         self.session.commit()
-        undo_history.record(deleted, keep_redo=True)
+        undo_history.record(deleted, keep_redo=True, session=self.session)
 
         return deleted
