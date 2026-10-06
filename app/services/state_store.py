@@ -22,7 +22,7 @@ def utc_now() -> datetime:
 
 
 def load(session: Session, scope: str, key: str) -> Any | None:
-    row = session.get(RuntimeState, (scope, key))
+    row = session.get(RuntimeState, (scope, key), with_for_update=True)
 
     return None if row is None else json.loads(row.payload)
 
