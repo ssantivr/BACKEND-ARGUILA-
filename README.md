@@ -1,11 +1,11 @@
-# BACKEND-ARGUILA-
+# BACKEND-ARQUILA
 
 API de ARQUILA, una aplicación para organizar proyectos de arquitectura. Es una de las tres partes del proyecto:
 
 ```text
 ARQUILA
 ├── FRONTEND-ARQUILA        Interfaz (React)
-├── BACKEND-ARGUILA-        Este repositorio
+├── BACKEND-ARQUILA         Este repositorio
 └── BASE-DE-DATOS-ARQUILA   Migraciones y datos de ejemplo (PostgreSQL)
 ```
 
@@ -21,7 +21,7 @@ Python 3.12 y FastAPI, con SQLAlchemy y psycopg sobre PostgreSQL, Argon2 para la
 
   ```text
   carpeta/
-  ├── BACKEND-ARGUILA-/
+  ├── BACKEND-ARQUILA/
   └── BASE-DE-DATOS-ARQUILA/
   ```
 
@@ -45,6 +45,7 @@ Copiar `.env.example` a `.env` y completarlo. El archivo `.env` no se sube al re
 |---|---|---|
 | `DATABASE_URL` | Conexión a PostgreSQL. Obligatoria. | — |
 | `DATABASE_DIR` | Carpeta de `BASE-DE-DATOS-ARQUILA`. | `../BASE-DE-DATOS-ARQUILA` |
+| `API_HOST` | Dirección en la que escucha la API. | `127.0.0.1` |
 | `API_PORT` | Puerto de la API. | `8000` |
 | `UPLOAD_DIR` | Carpeta de los archivos subidos. | `uploads` |
 | `COOKIE_SECURE` | `1` para enviar la cookie de sesión solo por HTTPS. | `0` |
@@ -84,6 +85,15 @@ Lee `.env`, aplica las migraciones pendientes y arranca la API en `http://127.0.
 
 - `http://localhost:8000/docs`: documentación interactiva con todas las operaciones.
 - `http://localhost:8000/health`: responde `{"status": "ok"}`.
+
+## Despliegue
+
+`python -m app.dev` está pensado para desarrollo y solo escucha en el propio equipo. En un servidor:
+
+- Poner `API_HOST=0.0.0.0` para aceptar conexiones de fuera, detrás de un servidor que dé HTTPS.
+- Definir `COOKIE_SECURE=1` y poner la dirección pública de la interfaz en `APP_URL`.
+- Apuntar `UPLOAD_DIR` a una carpeta que se conserve entre despliegues.
+- Ejecutar una sola instancia: los límites de intentos de inicio de sesión y el historial de «Deshacer» viven en memoria.
 
 ## Endpoints principales
 
@@ -142,7 +152,7 @@ ruff check app tests
 
 ## Documentación
 
-- `docs/BACKEND_Y_API.md`: decisiones del backend y de la interfaz (autenticación, seguridad, registro de eventos, archivos, terreno, IA).
+- `docs/BACKEND_Y_API.md`: decisiones del backend (autenticación, seguridad, registro de eventos, archivos, IA).
 - La documentación general del proyecto (requerimientos, estructuras de datos, complejidad, pruebas) está en el repositorio [ARQUILA](https://github.com/ssantivr/ARQUILA).
 
 Para que Ruff formatee los archivos antes de cada commit, activar los hooks una vez con `pre-commit install`.
