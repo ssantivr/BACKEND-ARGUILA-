@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -44,6 +46,21 @@ def get_file(file_id: int, service: FileService = Depends(get_service)):
 @router.get("/files/{file_id}/content")
 def get_file_content(file_id: int, service: FileService = Depends(get_service)):
     file = service.get(file_id)
+    data = service.content_data(file)
+
+    if data is not None:
+        quoted = quote(file.filename)
+        disposition = (
+            f'inline; filename="{quoted}"'
+            if quoted == file.filename
+            else f"inline; filename*=utf-8''{quoted}"
+        )
+
+        return Response(
+            data,
+            media_type=file.mime_type,
+            headers={"Content-Disposition": disposition, "X-Content-Type-Options": "nosniff"},
+        )
 
     return FileResponse(
         service.content_path(file),

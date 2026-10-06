@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app import storage
 from app.errors import NotFoundError
-from app.models import File, User
+from app.models import File, FileContent, User
 from app.repositories.file_repository import FileRepository
 from app.services.base import ProjectScopedService
 
@@ -24,6 +24,20 @@ class FileService(ProjectScopedService):
 
     def create(self, project_id: int, filename: str | None, stream: BinaryIO) -> File:
         self._ensure_project_exists(project_id)
+
+        if storage.keeps_files_in_database():
+            data, mime_type = storage.read(stream)
+
+            return self.files.save(
+                File(
+                    project_id=project_id,
+                    filename=clean_filename(filename),
+                    storage_path=storage.DATABASE_PATH,
+                    mime_type=mime_type,
+                    size_bytes=len(data),
+                    content=FileContent(data=data),
+                )
+            )
 
         stored_name, mime_type, size = storage.store(stream)
 
@@ -53,6 +67,15 @@ class FileService(ProjectScopedService):
             raise NotFoundError("File not found")
 
         return file
+
+    def content_data(self, file: File) -> bytes | None:
+        if file.storage_path != storage.DATABASE_PATH:
+            return None
+
+        if file.content is None:
+            raise NotFoundError("File content is missing from storage")
+
+        return file.content.data
 
     def content_path(self, file: File) -> Path:
         path = storage.path_for(file.storage_path)

@@ -173,3 +173,57 @@ def test_content_missing_from_disk_is_not_found(client, project_id, tmp_path):
 
     assert client.get(f"/files/{file_id}").status_code == 200
     assert client.get(f"/files/{file_id}/content").status_code == 404
+
+
+@pytest.fixture
+def database_storage(monkeypatch):
+    monkeypatch.setenv("FILE_STORAGE", "database")
+
+
+def test_database_storage_keeps_the_content_out_of_the_disk(
+    client, project_id, tmp_path, database_storage
+):
+    response = upload(client, project_id, name="planta baja.png")
+
+    assert response.status_code == 201
+    file = response.json()
+    assert file["mime_type"] == "image/png"
+    assert file["size_bytes"] == len(PNG)
+    assert stored_files(tmp_path) == []
+
+    content = client.get(f"/files/{file['id']}/content")
+    assert content.status_code == 200
+    assert content.content == PNG
+    assert content.headers["content-type"] == "image/png"
+    assert content.headers["content-disposition"].startswith("inline")
+    assert content.headers["x-content-type-options"] == "nosniff"
+
+
+def test_database_storage_applies_the_same_checks(
+    client, project_id, monkeypatch, database_storage
+):
+    assert upload(client, project_id, content=b"plain text").status_code == 415
+
+    monkeypatch.setattr(storage, "MAX_FILE_BYTES", 20)
+    assert upload(client, project_id).status_code == 413
+    assert client.get(f"/projects/{project_id}/files").json() == []
+
+
+def test_database_storage_deletes_the_content_with_the_file_and_the_project(
+    client, project_id, database_storage
+):
+    first = upload(client, project_id).json()["id"]
+    upload(client, project_id, name="other.pdf", content=PDF)
+
+    assert client.delete(f"/files/{first}").status_code == 204
+    assert client.get(f"/files/{first}/content").status_code == 404
+    assert client.delete(f"/projects/{project_id}").status_code == 204
+
+
+def test_files_stored_on_disk_are_still_served_when_the_database_is_used(
+    client, project_id, monkeypatch
+):
+    on_disk = upload(client, project_id).json()["id"]
+
+    monkeypatch.setenv("FILE_STORAGE", "database")
+    assert client.get(f"/files/{on_disk}/content").content == PNG

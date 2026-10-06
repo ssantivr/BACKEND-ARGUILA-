@@ -5,6 +5,7 @@ from sqlalchemy import (
     BigInteger,
     CheckConstraint,
     ForeignKey,
+    LargeBinary,
     Numeric,
     String,
     Text,
@@ -142,6 +143,17 @@ class File(Base):
     mime_type: Mapped[str] = mapped_column(String(120))
     size_bytes: Mapped[int] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    content: Mapped["FileContent | None"] = relationship(cascade="all, delete-orphan")
+
+
+class FileContent(Base):
+    __tablename__ = "file_contents"
+
+    file_id: Mapped[int] = mapped_column(
+        ForeignKey("files.id", ondelete="CASCADE"), primary_key=True
+    )
+    data: Mapped[bytes] = mapped_column(LargeBinary)
 
 
 SURFACE_CHECK = "surface IN ('concrete', 'brick', 'plaster', 'glass', 'steel', 'wood', 'stone')"

@@ -7,10 +7,19 @@ from app.errors import FileTooLargeError, UnsupportedFileError
 
 MAX_FILE_BYTES = 20 * 1024 * 1024
 CHUNK_BYTES = 1024 * 1024
+DATABASE_PATH = "database"
 
 
 def upload_dir() -> Path:
     return Path(os.environ.get("UPLOAD_DIR", "uploads")).resolve()
+
+
+def keeps_files_in_database() -> bool:
+    return os.environ.get("FILE_STORAGE", "disk").lower() == "database"
+
+
+def too_large() -> FileTooLargeError:
+    return FileTooLargeError(f"File exceeds the {MAX_FILE_BYTES // (1024 * 1024)} MB limit")
 
 
 def detect_type(head: bytes) -> tuple[str, str] | None:
@@ -29,14 +38,29 @@ def detect_type(head: bytes) -> tuple[str, str] | None:
     return None
 
 
-def store(stream: BinaryIO) -> tuple[str, str, int]:
-    head = stream.read(16)
+def require_type(head: bytes) -> tuple[str, str]:
     detected = detect_type(head)
 
     if detected is None:
         raise UnsupportedFileError("Only PDF, PNG, JPEG and WebP files are supported")
 
-    mime_type, extension = detected
+    return detected
+
+
+def read(stream: BinaryIO) -> tuple[bytes, str]:
+    head = stream.read(16)
+    mime_type, _ = require_type(head)
+    data = head + stream.read(MAX_FILE_BYTES + 1 - len(head))
+
+    if len(data) > MAX_FILE_BYTES:
+        raise too_large()
+
+    return data, mime_type
+
+
+def store(stream: BinaryIO) -> tuple[str, str, int]:
+    head = stream.read(16)
+    mime_type, extension = require_type(head)
     stored_name = f"{uuid4().hex}{extension}"
     directory = upload_dir()
     directory.mkdir(parents=True, exist_ok=True)
@@ -51,9 +75,7 @@ def store(stream: BinaryIO) -> tuple[str, str, int]:
                 size += len(chunk)
 
                 if size > MAX_FILE_BYTES:
-                    raise FileTooLargeError(
-                        f"File exceeds the {MAX_FILE_BYTES // (1024 * 1024)} MB limit"
-                    )
+                    raise too_large()
 
                 output.write(chunk)
                 chunk = stream.read(CHUNK_BYTES)
@@ -69,4 +91,5 @@ def path_for(stored_name: str) -> Path:
 
 
 def remove(stored_name: str) -> None:
-    path_for(stored_name).unlink(missing_ok=True)
+    if stored_name != DATABASE_PATH:
+        path_for(stored_name).unlink(missing_ok=True)
