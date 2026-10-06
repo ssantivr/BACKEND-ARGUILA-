@@ -12,3 +12,4 @@ venv/
 *.db
 *.log
 uploads/
+.vercel

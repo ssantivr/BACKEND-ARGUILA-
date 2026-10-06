@@ -1,0 +1,8 @@
+.venv
+tests
+uploads
+*.db
+.env
+.env.*
+.pytest_cache
+.ruff_cache
