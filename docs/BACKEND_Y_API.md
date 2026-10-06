@@ -74,10 +74,11 @@ Todo lo que pertenece a un proyecto exige sesión y que el proyecto sea del usua
 
 ## Archivos
 
-- Se guardan en disco, en la carpeta indicada por `UPLOAD_DIR`, con un nombre aleatorio. El nombre original solo se guarda como texto para mostrarlo; nunca decide dónde se escribe el archivo.
+- Por defecto se guardan en disco, en la carpeta indicada por `UPLOAD_DIR`, con un nombre aleatorio. El nombre original solo se guarda como texto para mostrarlo; nunca decide dónde se escribe el archivo.
 - El tipo se detecta por los primeros bytes del contenido, no por la extensión ni por lo que declare el navegador. Se admiten PDF, PNG, JPEG y WebP, hasta 20 MB.
 - Al eliminar un archivo se desvincula de forma explícita de los planos y elevaciones que lo usaban. No se depende de `ON DELETE SET NULL` porque SQLite, que se usa en las pruebas, solo lo aplica si se activan las claves foráneas.
 - Al eliminar un proyecto se borran también sus archivos del disco.
+- Con `FILE_STORAGE=database` el contenido se guarda en la tabla `file_contents` de PostgreSQL en lugar del disco. Existe para los alojamientos que no conservan el disco entre peticiones, como Vercel. Las comprobaciones de tipo y de tamaño son las mismas, y el contenido se borra con su archivo. Los archivos que ya estaban en disco se siguen sirviendo desde ahí. Guardar binarios en la base es aceptable para archivos pequeños y pocos usuarios; con más volumen convendría un almacenamiento de objetos.
 - El botón «Ver», en la pestaña Archivos y junto al archivo adjunto de un plano o una elevación, abre el archivo dentro de la aplicación en una ventana superpuesta (`FRONTEND-ARQUILA/src/components/FileViewer.tsx` y `Modal.tsx`): las imágenes se muestran ajustadas a la ventana y los PDF con el lector del navegador. La ventana usa el elemento `<dialog>` del navegador, así que se cierra con Escape, con el botón «Cerrar» o pulsando fuera, y tiene un enlace para abrir el archivo en otra pestaña.
 
 ## Deshacer eliminaciones
@@ -261,6 +262,7 @@ Se pueden definir en la terminal o en el archivo `.env`, que leen `python -m app
 | `DATABASE_DIR` | Carpeta del repositorio `BASE-DE-DATOS-ARQUILA`, de donde salen las migraciones (por defecto la carpeta hermana `../BASE-DE-DATOS-ARQUILA`). |
 | `API_HOST`, `API_PORT` | Dirección y puerto en los que escucha la API (por defecto `127.0.0.1` y `8000`). |
 | `UPLOAD_DIR` | Carpeta de archivos subidos (por defecto `uploads`). |
+| `FILE_STORAGE` | `disk` (por defecto) guarda los archivos en `UPLOAD_DIR`; `database` los guarda en la tabla `file_contents`. |
 | `COOKIE_SECURE` | `1` para exigir HTTPS en la cookie de sesión. |
 | `COOKIE_SAMESITE` | `lax`, `strict` o `none` (por defecto `lax`). `none` permite usar la sesión desde otro sitio y obliga a HTTPS. |
 | `LOG_LEVEL` | Nivel mínimo del registro de eventos: `DEBUG`, `INFO`, `WARNING` o `ERROR` (por defecto `INFO`). |
