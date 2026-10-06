@@ -48,6 +48,7 @@ Copiar `.env.example` a `.env` y completarlo. El archivo `.env` no se sube al re
 | `API_PORT` | Puerto de la API. | `8000` |
 | `UPLOAD_DIR` | Carpeta de los archivos subidos. | `uploads` |
 | `COOKIE_SECURE` | `1` para enviar la cookie de sesión solo por HTTPS. | `0` |
+| `COOKIE_SAMESITE` | `lax`, `strict` o `none`. Usar `none` solo si la interfaz está en otro sitio; obliga a HTTPS. | `lax` |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING` o `ERROR`. | `INFO` |
 | `APP_URL` | Dirección de la interfaz; se usa en el enlace de recuperación de contraseña y como origen permitido. | `http://localhost:5173` |
 | `CORS_ORIGINS` | Orígenes permitidos, separados por comas. | `APP_URL` |
@@ -113,7 +114,7 @@ No se usa ninguna API externa de pago ni con clave.
 
 ## Conexión con la interfaz
 
-`FRONTEND-ARQUILA` llama a esta API. Solo se aceptan peticiones de navegador desde los orígenes de `APP_URL` o `CORS_ORIGINS`.
+`FRONTEND-ARQUILA` llama a esta API. Solo se aceptan peticiones de navegador desde los orígenes de `APP_URL` o `CORS_ORIGINS`. Si la interfaz se sirve desde otro sitio (otro dominio registrado), hay que definir además `COOKIE_SAMESITE=none` y usar HTTPS, o el navegador no enviará la cookie de sesión.
 
 ## Organización
 

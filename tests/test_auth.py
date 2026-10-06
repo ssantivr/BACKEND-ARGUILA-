@@ -33,6 +33,35 @@ def test_session_cookie_is_http_only(client):
     assert cookie.startswith(f"{SESSION_COOKIE}=")
     assert "httponly" in cookie
     assert "samesite=lax" in cookie
+    assert "secure" not in cookie
+
+
+def test_session_cookie_can_be_sent_from_another_site(client, monkeypatch):
+    monkeypatch.setenv("COOKIE_SAMESITE", "none")
+
+    response = client.post(
+        "/auth/register",
+        json={"name": "Ana", "email": "ana@example.com", "password": PASSWORD},
+    )
+
+    cookie = response.headers["set-cookie"].lower()
+    assert "samesite=none" in cookie
+    assert "secure" in cookie
+
+    cleared = client.post("/auth/logout").headers["set-cookie"].lower()
+    assert "samesite=none" in cleared
+    assert "secure" in cleared
+
+
+def test_unknown_same_site_value_falls_back_to_lax(client, monkeypatch):
+    monkeypatch.setenv("COOKIE_SAMESITE", "anything")
+
+    response = client.post(
+        "/auth/register",
+        json={"name": "Ana", "email": "ana@example.com", "password": PASSWORD},
+    )
+
+    assert "samesite=lax" in response.headers["set-cookie"].lower()
 
 
 @pytest.mark.parametrize(

@@ -18,9 +18,25 @@ from app.services.auth_service import SESSION_LIFETIME, AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+SAMESITE_VALUES = ("lax", "strict", "none")
+
 
 def get_service(session: Session = Depends(get_session)) -> AuthService:
     return AuthService(session)
+
+
+def cookie_options() -> dict:
+    samesite = os.environ.get("COOKIE_SAMESITE", "lax").lower()
+
+    if samesite not in SAMESITE_VALUES:
+        samesite = "lax"
+
+    return {
+        "httponly": True,
+        "samesite": samesite,
+        "secure": samesite == "none" or os.environ.get("COOKIE_SECURE", "0") == "1",
+        "path": "/",
+    }
 
 
 def set_session_cookie(response: Response, token: str) -> None:
@@ -28,10 +44,7 @@ def set_session_cookie(response: Response, token: str) -> None:
         SESSION_COOKIE,
         token,
         max_age=int(SESSION_LIFETIME.total_seconds()),
-        httponly=True,
-        samesite="lax",
-        secure=os.environ.get("COOKIE_SECURE", "0") == "1",
-        path="/",
+        **cookie_options(),
     )
 
 
@@ -65,7 +78,7 @@ def logout(
     service.logout(token)
 
     response = Response(status_code=204)
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(SESSION_COOKIE, **cookie_options())
     return response
 
 
@@ -87,7 +100,7 @@ def confirm_password_reset(
     service.reset_password(data.token, data.password)
 
     response = Response(status_code=204)
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(SESSION_COOKIE, **cookie_options())
     return response
 
 
