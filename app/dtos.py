@@ -36,7 +36,32 @@ def limit_config_size(config: dict[str, Any]) -> dict[str, Any]:
     return config
 
 
+def is_point(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and len(value) == 3
+        and all(isinstance(item, int | float) and not isinstance(item, bool) for item in value)
+    )
+
+
+def check_camera(config: dict[str, Any]) -> dict[str, Any]:
+    camera = config.get("camera")
+
+    if camera is not None and not (
+        isinstance(camera, dict)
+        and is_point(camera.get("position"))
+        and is_point(camera.get("target"))
+    ):
+        raise ValueError(
+            "La cámara debe tener «position» y «target» como listas de tres números [x, y, z]."
+        )
+
+    return config
+
+
 JsonConfig = Annotated[dict[str, Any], AfterValidator(limit_config_size)]
+ViewConfig = Annotated[JsonConfig, AfterValidator(check_camera)]
+SceneFormat = Literal["json", "gltf"]
 Coordinate = Annotated[float, Field(ge=-COORDINATE_LIMIT_M, le=COORDINATE_LIMIT_M)]
 Name = Annotated[str, Field(min_length=1, max_length=160)]
 AssetRef = Annotated[str, Field(min_length=1, max_length=500)]
@@ -249,7 +274,7 @@ class WalkthroughStepCreate(BaseModel):
     title: Name
     description: str | None = Field(default=None, max_length=2000)
     duration_ms: int = Field(default=5000, ge=1000, le=60_000)
-    view_config: JsonConfig = Field(default_factory=dict)
+    view_config: ViewConfig = Field(default_factory=dict)
 
 
 class WalkthroughStepUpdate(BaseModel):
@@ -258,7 +283,7 @@ class WalkthroughStepUpdate(BaseModel):
     title: Name | None = None
     description: str | None = Field(default=None, max_length=2000)
     duration_ms: int | None = Field(default=None, ge=1000, le=60_000)
-    view_config: JsonConfig | None = None
+    view_config: ViewConfig | None = None
 
 
 class WalkthroughStepRead(BaseModel):

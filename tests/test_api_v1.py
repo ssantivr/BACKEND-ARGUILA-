@@ -656,3 +656,102 @@ def test_other_users_cannot_reach_spatial_data_or_walkthroughs(
         ).status_code
         == 404
     )
+
+
+def test_a_room_mesh_is_exported_as_gltf_and_read_back(client, project_id, room_id):
+    client.post(
+        f"{API}/spatial-data/elements",
+        json={**ELEMENT, "project_id": project_id, "room_id": room_id},
+    )
+
+    response = client.get(f"{API}/rooms/{room_id}/mesh")
+    document = response.json()
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "model/gltf+json"
+    assert document["asset"]["version"] == "2.0"
+    assert [node["name"] for node in document["nodes"]] == ["Kitchen", "Cold water pipe"]
+    assert document["nodes"][0]["translation"] == [2.5, 1.5, -2]
+    assert document["nodes"][0]["scale"] == [5, 3, 4]
+    assert document["buffers"][0]["byteLength"] == 168
+
+    other = client.post("/projects", json={"name": "Copy"}).json()["id"]
+    imported = client.post(
+        f"{API}/spatial-data/import",
+        json={"project_id": other, "provider": "gltf", "document": document},
+    ).json()["elements"]
+
+    room, pipe = imported
+
+    assert (room["min_x_m"], room["max_x_m"], room["min_y_m"], room["max_y_m"]) == (0, 5, 0, 4)
+    assert (room["min_z_m"], room["max_z_m"]) == (0, 3)
+    assert (pipe["layer"], pipe["kind"]) == ("installations", "water_pipe")
+    assert [pipe[f"{side}_{axis}_m"] for side in ("min", "max") for axis in "xyz"] == [
+        ELEMENT[f"{side}_{axis}_m"] for side in ("min", "max") for axis in "xyz"
+    ]
+
+
+def test_scenes_come_in_two_formats_and_respect_ownership(client, project_id, room_id, stranger):
+    plain = client.get(f"{API}/rooms/{room_id}/mesh?format=json")
+
+    assert plain.headers["content-type"] == "application/json"
+    assert plain.json()["boxes"] == [
+        {"name": "Kitchen", "layer": "room", "kind": "room", "min": [0, 0, 0], "max": [5, 4, 3]}
+    ]
+
+    whole = client.get(f"{API}/spatial-data/scene?project_id={project_id}&format=json").json()
+
+    assert (whole["title"], len(whole["boxes"])) == ("Demo House", 1)
+    assert client.get(f"{API}/rooms/{room_id}/mesh?format=obj").status_code == 422
+    assert client.get(f"{API}/rooms/9999/mesh").status_code == 404
+    assert stranger.get(f"{API}/rooms/{room_id}/mesh").status_code == 404
+    assert stranger.get(f"{API}/spatial-data/scene?project_id={project_id}").status_code == 404
+
+
+def test_renovation_logs_are_also_served_on_their_own(client, project_id):
+    created = client.post(
+        f"{API}/renovations/logs",
+        json={"project_id": project_id, "layer": "finishes", "title": "Paint the walls"},
+    )
+
+    assert created.status_code == 201
+
+    log_id = created.json()["id"]
+
+    assert [
+        log["id"] for log in client.get(f"{API}/renovations/logs?project_id={project_id}").json()
+    ] == [log_id]
+    assert (
+        client.patch(f"{API}/renovations/logs/{log_id}", json={"status": "completed"}).json()[
+            "completed_at"
+        ]
+        is not None
+    )
+    assert len(client.get(f"{API}/interior-walkthrough/logs?project_id={project_id}").json()) == 1
+    assert client.delete(f"{API}/renovations/logs/{log_id}").status_code == 204
+
+
+def test_a_walkthrough_step_camera_must_be_two_points(client, project_id):
+    def add(camera):
+        return client.post(
+            f"{API}/interior-walkthrough/steps",
+            json={"project_id": project_id, "title": "Step", "view_config": {"camera": camera}},
+        )
+
+    good = add({"position": [4, 12, 4.4], "target": [7, 9.5, 4]})
+
+    assert good.status_code == 201
+    assert good.json()["view_config"]["camera"]["target"] == [7, 9.5, 4]
+
+    bad = add({"position": [4, 12], "target": [7, 9.5, 4]})
+
+    assert bad.status_code == 422
+    assert bad.json()["detail"][0]["msg"].startswith("La cámara debe tener")
+    assert add("front").status_code == 422
+    assert (
+        client.patch(
+            f"{API}/interior-walkthrough/steps/{good.json()['id']}",
+            json={"view_config": {"camera": {"position": [1, 2, 3]}}},
+        ).status_code
+        == 422
+    )

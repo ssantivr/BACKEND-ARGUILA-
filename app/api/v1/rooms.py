@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import require
 from app.database import get_session
-from app.dtos import RoomCategory, RoomSpatialRead, RoomSpatialUpdate
+from app.dtos import RoomCategory, RoomSpatialRead, RoomSpatialUpdate, SceneFormat
 from app.models import User
 from app.services.room_spatial_service import RoomSpatialService
+from app.services.scene_service import SceneService
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
 
@@ -46,3 +48,15 @@ def update_room(
     service: RoomSpatialService = Depends(writer),
 ):
     return service.update(room_id, data)
+
+
+@router.get("/{room_id}/mesh")
+def get_room_mesh(
+    room_id: int,
+    format: SceneFormat = "gltf",
+    session: Session = Depends(get_session),
+    user: User = Depends(require("rooms:read")),
+):
+    scene = SceneService(session, user).room_scene(room_id, format)
+
+    return JSONResponse(scene.render(), media_type=scene.media_type)
