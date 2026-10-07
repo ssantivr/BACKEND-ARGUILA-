@@ -17,6 +17,8 @@ from app.models import User
 from app.services.walkthrough_service import WalkthroughService
 
 router = APIRouter(prefix="/interior-walkthrough", tags=["interior walkthrough"])
+# The renovation logs are also served on their own, under /renovations/logs.
+logs = APIRouter()
 
 
 def reader(
@@ -58,7 +60,7 @@ def delete_step(step_id: int, service: WalkthroughService = Depends(writer)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/logs", response_model=list[RenovationLogRead])
+@logs.get("", response_model=list[RenovationLogRead])
 def list_logs(
     project_id: int,
     room_id: int | None = None,
@@ -68,12 +70,12 @@ def list_logs(
     return service.list_logs(project_id, room_id, status)
 
 
-@router.post("/logs", response_model=RenovationLogRead, status_code=status.HTTP_201_CREATED)
+@logs.post("", response_model=RenovationLogRead, status_code=status.HTTP_201_CREATED)
 def create_log(data: RenovationLogCreate, service: WalkthroughService = Depends(writer)):
     return service.create_log(data)
 
 
-@router.patch("/logs/{log_id}", response_model=RenovationLogRead)
+@logs.patch("/{log_id}", response_model=RenovationLogRead)
 def update_log(
     log_id: int,
     data: RenovationLogUpdate,
@@ -82,7 +84,10 @@ def update_log(
     return service.update_log(log_id, data)
 
 
-@router.delete("/logs/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
+@logs.delete("/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_log(log_id: int, service: WalkthroughService = Depends(writer)):
     service.delete_log(log_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+router.include_router(logs, prefix="/logs")

@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, Response, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import require
 from app.database import get_session
 from app.dtos import (
     Layer,
+    SceneFormat,
     SpatialDataRead,
     SpatialElementCreate,
     SpatialElementRead,
@@ -17,6 +19,7 @@ from app.errors import InvalidDataError
 from app.models import User
 from app.providers import PROVIDERS
 from app.repositories.spatial_element_repository import Footprint
+from app.services.scene_service import SceneService
 from app.services.spatial_service import SpatialService
 
 router = APIRouter(prefix="/spatial-data", tags=["spatial data"])
@@ -63,6 +66,18 @@ def read_spatial_data(
     service: SpatialService = Depends(reader),
 ):
     return service.read(project_id, layer, room_id, work_status, footprint)
+
+
+@router.get("/scene")
+def get_project_scene(
+    project_id: int,
+    format: SceneFormat = "gltf",
+    session: Session = Depends(get_session),
+    user: User = Depends(require("spatial:read")),
+):
+    scene = SceneService(session, user).project_scene(project_id, format)
+
+    return JSONResponse(scene.render(), media_type=scene.media_type)
 
 
 @router.get("/providers", response_model=list[str])
