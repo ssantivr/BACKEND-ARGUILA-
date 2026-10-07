@@ -72,6 +72,24 @@ Las interfaces se declaran con `typing.Protocol`: cualquier clase que tenga el m
 
 Todo lo que pertenece a un proyecto exige sesión y que el proyecto sea del usuario. Un proyecto ajeno responde 404, igual que uno inexistente, para no revelar qué identificadores existen. La comprobación está centralizada en `services/base.py`.
 
+## API v1: unidades, datos espaciales y corrida de interior
+
+Las rutas nuevas viven bajo `/api/v1` y conviven con las anteriores, que no cambian.
+
+| Ruta | Operaciones | Permiso |
+|---|---|---|
+| `/api/v1/properties`, `/api/v1/units` | Listar, crear, leer, editar y eliminar propiedades y unidades. | `units:read`, `units:write` |
+| `/api/v1/rooms` | Listar y leer los cuartos con su unidad, categoría y malla; `PATCH` cambia esos tres datos. Crear y eliminar cuartos sigue en las rutas anteriores, que tienen «Deshacer». | `rooms:read`, `rooms:write` |
+| `/api/v1/spatial-data` | `GET` devuelve en una sola respuesta los elementos del proyecto y el recuento por capa; admite `layer`, `room_id`, `work_status` y `bbox=min_x,min_y,max_x,max_y`. `/elements` crea, edita y elimina; `/import` carga un documento externo; `/providers` lista los formatos. | `spatial:read`, `spatial:write` |
+| `/api/v1/interior-walkthrough` | `GET` devuelve los pasos en orden y el registro de obras. `/steps` y `/logs` crean, editan y eliminan. | `walkthrough:read`, `walkthrough:write` |
+| `/api/v1/auth/token`, `/api/v1/auth/me` | Emitir un token de acceso y consultar los roles y permisos propios. | — |
+| `/api/v1/users/{id}/roles` | Asignar roles a un usuario. | `roles:manage` |
+
+- **Mensajes en español**: en estas rutas el `detail` de los errores y los mensajes de validación ya llegan en español (`api/v1/validation.py`), con la misma forma que usa FastAPI. Las rutas anteriores siguen respondiendo en inglés y la interfaz las traduce.
+- **Roles**: cada operación exige un permiso (`require(...)` en `api/deps.py`) además de que el proyecto sea del usuario; sin el permiso responde 403. Los roles y sus permisos se leen de la base de datos. Quien se registra recibe el rol `architect`. Ningún rol da acceso a proyectos ajenos. El primer `admin` se asigna en la base de datos; no hay pantalla para administrar roles.
+- **Token de acceso (JWT)**: `POST /api/v1/auth/token` recibe correo y contraseña y devuelve un token HS256 válido 15 minutos, que se envía como `Authorization: Bearer ...`. Solo sirve en `/api/v1`, deja de valer si el usuario cambia la contraseña y comparte el límite de intentos del inicio de sesión. Si `JWT_SECRET` no está definida o tiene menos de 32 bytes, la ruta responde 503. La interfaz web no lo usa: sigue con la cookie de sesión, que el navegador no deja leer a los scripts.
+- **Adaptadores de formatos 3D** (`app/providers/`): `SpatialDataProvider` es la interfaz y cada formato externo tiene un adaptador que lo convierte en borradores de elementos. `gltf` lee la parte JSON de un glTF 2.0 (un elemento por nodo con malla; la caja sale de los `min` y `max` del atributo `POSITION`, con las transformaciones de los nodos, y pasa de «Y hacia arriba» a las coordenadas del plano). `native` lee una lista de elementos con sus cajas. Añadir otro formato es escribir un adaptador y registrarlo en `providers/__init__.py`. No hay adaptador para DWG, IFC ni Revit.
+
 ## Archivos
 
 - Por defecto se guardan en disco, en la carpeta indicada por `UPLOAD_DIR`, con un nombre aleatorio. El nombre original solo se guarda como texto para mostrarlo; nunca decide dónde se escribe el archivo.
@@ -267,6 +285,7 @@ Se pueden definir en la terminal o en el archivo `.env`, que leen `python -m app
 | `STATE_STORAGE` | `memory` (por defecto) guarda en memoria el historial de «Deshacer» y los límites de intentos; `database` los guarda en la tabla `runtime_state`. |
 | `FILE_STORAGE` | `disk` (por defecto) guarda los archivos en `UPLOAD_DIR`; `database` los guarda en la tabla `file_contents`. |
 | `COOKIE_SECURE` | `1` para exigir HTTPS en la cookie de sesión. |
+| `JWT_SECRET` | Clave de al menos 32 bytes para firmar los tokens de acceso de `/api/v1/auth/token`. Sin ella no se emiten tokens; el resto de la API funciona igual. |
 | `COOKIE_SAMESITE` | `lax`, `strict` o `none` (por defecto `lax`). `none` permite usar la sesión desde otro sitio y obliga a HTTPS. |
 | `LOG_LEVEL` | Nivel mínimo del registro de eventos: `DEBUG`, `INFO`, `WARNING` o `ERROR` (por defecto `INFO`). |
 | `OLLAMA_MODEL` | Modelo local que usa el asistente (por defecto, el primero instalado). |

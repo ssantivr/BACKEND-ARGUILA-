@@ -28,3 +28,15 @@ class UnsupportedFileError(Exception):
 
 class FileTooLargeError(Exception):
     pass
+
+
+class PermissionDeniedError(Exception):
+    pass
+
+
+class InvalidDataError(Exception):
+    pass
+
+
+class NotConfiguredError(Exception):
+    pass
