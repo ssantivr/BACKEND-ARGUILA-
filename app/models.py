@@ -1,20 +1,69 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     CheckConstraint,
+    Column,
+    DateTime,
     ForeignKey,
     LargeBinary,
     Numeric,
     String,
+    Table,
     Text,
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+JsonObject = JSON().with_variant(JSONB(), "postgresql")
+
+role_permissions = Table(
+    "role_permissions",
+    Base.metadata,
+    Column("role_id", ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "permission_id",
+        ForeignKey("permissions.id", ondelete="CASCADE"),
+        primary_key=True,
+        index=True,
+    ),
+)
+
+user_roles = Table(
+    "user_roles",
+    Base.metadata,
+    Column("user_id", ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("role_id", ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True, index=True),
+    Column("assigned_at", DateTime, nullable=False, server_default=func.now()),
+)
+
+
+class Permission(Base):
+    __tablename__ = "permissions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    code: Mapped[str] = mapped_column(String(80), unique=True)
+    description: Mapped[str] = mapped_column(String(255))
+
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(40), unique=True)
+    description: Mapped[str] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    permissions: Mapped[list[Permission]] = relationship(
+        secondary=role_permissions, lazy="selectin"
+    )
 
 
 class User(Base):
@@ -33,6 +82,7 @@ class User(Base):
     password_reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
         cascade="all, delete-orphan"
     )
+    roles: Mapped[list[Role]] = relationship(secondary=user_roles, lazy="selectin")
 
 
 class UserSession(Base):
@@ -81,6 +131,10 @@ class Project(Base):
     materials: Mapped[list["Material"]] = relationship(cascade="all, delete-orphan")
     recommendations: Mapped[list["Recommendation"]] = relationship(cascade="all, delete-orphan")
     conversations: Mapped[list["AIConversation"]] = relationship(cascade="all, delete-orphan")
+    properties: Mapped[list["Property"]] = relationship(cascade="all, delete-orphan")
+    spatial_elements: Mapped[list["SpatialElement"]] = relationship(cascade="all, delete-orphan")
+    walkthrough_steps: Mapped[list["WalkthroughStep"]] = relationship(cascade="all, delete-orphan")
+    renovation_logs: Mapped[list["RenovationLog"]] = relationship(cascade="all, delete-orphan")
 
 
 class Terrain(Base):
@@ -166,6 +220,11 @@ class RuntimeState(Base):
 
 
 SURFACE_CHECK = "surface IN ('concrete', 'brick', 'plaster', 'glass', 'steel', 'wood', 'stone')"
+ROOM_CATEGORY_CHECK = (
+    "category IN ('master_bedroom', 'bedroom', 'living_dining', 'kitchen', 'bathroom', "
+    "'study', 'circulation', 'service', 'garage', 'commercial', 'other')"
+)
+LAYER_CHECK = "layer IN ('structure', 'installations', 'finishes')"
 
 
 class Plan(Base):
@@ -194,6 +253,7 @@ class Room(Base):
         CheckConstraint("depth_m > 0"),
         CheckConstraint("height_m > 0"),
         CheckConstraint(SURFACE_CHECK),
+        CheckConstraint(ROOM_CATEGORY_CHECK),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -201,7 +261,12 @@ class Room(Base):
         ForeignKey("projects.id", ondelete="CASCADE"), index=True
     )
     plan_id: Mapped[int] = mapped_column(ForeignKey("plans.id", ondelete="CASCADE"), index=True)
+    unit_id: Mapped[int | None] = mapped_column(
+        ForeignKey("units.id", ondelete="SET NULL"), index=True
+    )
     name: Mapped[str] = mapped_column(String(160))
+    category: Mapped[str] = mapped_column(String(20), server_default="other")
+    mesh_ref: Mapped[str | None] = mapped_column(String(500))
     x_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
     y_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
     width_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
@@ -209,6 +274,10 @@ class Room(Base):
     height_m: Mapped[Decimal] = mapped_column(Numeric(6, 2))
     surface: Mapped[str | None] = mapped_column(String(20))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    spatial_elements: Mapped[list["SpatialElement"]] = relationship(overlaps="spatial_elements")
+    walkthrough_steps: Mapped[list["WalkthroughStep"]] = relationship(overlaps="walkthrough_steps")
+    renovation_logs: Mapped[list["RenovationLog"]] = relationship(overlaps="renovation_logs")
 
 
 class StructuralComponent(Base):
@@ -320,3 +389,148 @@ class AIMessage(Base):
     content: Mapped[str] = mapped_column(Text)
     source: Mapped[str | None] = mapped_column(String(10))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class Property(Base):
+    __tablename__ = "properties"
+    __table_args__ = (
+        UniqueConstraint("project_id", "name"),
+        CheckConstraint(
+            "property_type IN ('house', 'apartment_building', 'commercial', 'mixed_use')"
+        ),
+        CheckConstraint("status IN ('planning', 'under_construction', 'renovation', 'delivered')"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(160))
+    property_type: Mapped[str] = mapped_column(String(20), server_default="house")
+    address: Mapped[str | None] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(20), server_default="planning")
+    spatial_metadata: Mapped[dict[str, Any]] = mapped_column(JsonObject, default=dict)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    units: Mapped[list["Unit"]] = relationship(cascade="all, delete-orphan")
+
+
+class Unit(Base):
+    __tablename__ = "units"
+    __table_args__ = (
+        UniqueConstraint("property_id", "code"),
+        CheckConstraint("status IN ('available', 'reserved', 'sold', 'under_renovation')"),
+        CheckConstraint("price >= 0"),
+        CheckConstraint("area_m2 > 0"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    property_id: Mapped[int] = mapped_column(
+        ForeignKey("properties.id", ondelete="CASCADE"), index=True
+    )
+    code: Mapped[str] = mapped_column(String(40))
+    name: Mapped[str] = mapped_column(String(160))
+    floor_level: Mapped[int] = mapped_column(server_default="0")
+    status: Mapped[str] = mapped_column(String(20), server_default="available")
+    price: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    currency: Mapped[str] = mapped_column(String(3), server_default="USD")
+    area_m2: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    model_asset_ref: Mapped[str | None] = mapped_column(String(500))
+    asset_config: Mapped[dict[str, Any]] = mapped_column(JsonObject, default=dict)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    rooms: Mapped[list[Room]] = relationship()
+
+
+class SpatialElement(Base):
+    __tablename__ = "spatial_elements"
+    __table_args__ = (
+        CheckConstraint(LAYER_CHECK),
+        CheckConstraint("work_status IN ('existing', 'planned', 'demolition')"),
+        CheckConstraint("max_x_m > min_x_m"),
+        CheckConstraint("max_y_m > min_y_m"),
+        CheckConstraint("max_z_m > min_z_m"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    room_id: Mapped[int | None] = mapped_column(
+        ForeignKey("rooms.id", ondelete="SET NULL"), index=True
+    )
+    layer: Mapped[str] = mapped_column(String(20))
+    kind: Mapped[str] = mapped_column(String(40))
+    name: Mapped[str] = mapped_column(String(160))
+    work_status: Mapped[str] = mapped_column(String(20), server_default="existing")
+    min_x_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    min_y_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    min_z_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    max_x_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    max_y_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    max_z_m: Mapped[Decimal] = mapped_column(Numeric(8, 2))
+    mesh_ref: Mapped[str | None] = mapped_column(String(500))
+    config: Mapped[dict[str, Any]] = mapped_column(JsonObject, default=dict)
+    source: Mapped[str] = mapped_column(String(20), server_default="manual")
+    external_id: Mapped[str | None] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    renovation_logs: Mapped[list["RenovationLog"]] = relationship(overlaps="renovation_logs")
+
+
+class WalkthroughStep(Base):
+    __tablename__ = "walkthrough_steps"
+    __table_args__ = (
+        CheckConstraint("position >= 0"),
+        CheckConstraint("duration_ms BETWEEN 1000 AND 60000"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    room_id: Mapped[int | None] = mapped_column(
+        ForeignKey("rooms.id", ondelete="SET NULL"), index=True
+    )
+    position: Mapped[int] = mapped_column()
+    title: Mapped[str] = mapped_column(String(160))
+    description: Mapped[str | None] = mapped_column(Text)
+    duration_ms: Mapped[int] = mapped_column(server_default="5000")
+    view_config: Mapped[dict[str, Any]] = mapped_column(JsonObject, default=dict)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class RenovationLog(Base):
+    __tablename__ = "renovation_logs"
+    __table_args__ = (
+        CheckConstraint(LAYER_CHECK),
+        CheckConstraint("status IN ('planned', 'in_progress', 'completed', 'cancelled')"),
+        CheckConstraint("estimated_cost >= 0"),
+        CheckConstraint("planned_end >= planned_start"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), index=True
+    )
+    room_id: Mapped[int | None] = mapped_column(
+        ForeignKey("rooms.id", ondelete="SET NULL"), index=True
+    )
+    spatial_element_id: Mapped[int | None] = mapped_column(
+        ForeignKey("spatial_elements.id", ondelete="SET NULL"), index=True
+    )
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    layer: Mapped[str] = mapped_column(String(20))
+    title: Mapped[str] = mapped_column(String(160))
+    description: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), server_default="planned")
+    planned_start: Mapped[date | None] = mapped_column()
+    planned_end: Mapped[date | None] = mapped_column()
+    completed_at: Mapped[datetime | None] = mapped_column()
+    estimated_cost: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())

@@ -5,20 +5,23 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import security
+from app import security, tokens
 from app.errors import (
     AuthenticationError,
     ConflictError,
     InvalidTokenError,
+    NotConfiguredError,
     TooManyAttemptsError,
 )
 from app.logs import logger
 from app.mailer import Mailer
 from app.models import PasswordResetToken, User, UserSession
 from app.repositories.password_reset_repository import PasswordResetRepository
+from app.repositories.role_repository import RoleRepository
 from app.repositories.session_repository import SessionRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas import LoginRequest, RegisterRequest
+from app.services.access_service import DEFAULT_ROLE
 from app.services.login_limiter import login_limiter, reset_request_limiter
 
 SESSION_LIFETIME = timedelta(days=7)
@@ -38,6 +41,7 @@ class AuthService:
         self.users = UserRepository(session)
         self.sessions = SessionRepository(session)
         self.resets = PasswordResetRepository(session)
+        self.roles = RoleRepository(session)
 
     def register(self, data: RegisterRequest) -> tuple[User, str]:
         email = normalize_email(data.email)
@@ -51,6 +55,7 @@ class AuthService:
                     name=data.name.strip(),
                     email=email,
                     password_hash=security.hash_password(data.password),
+                    roles=self.roles.list_by_names([DEFAULT_ROLE]),
                 )
             )
         except IntegrityError:
@@ -60,6 +65,35 @@ class AuthService:
         return user, self._start_session(user)
 
     def login(self, data: LoginRequest) -> tuple[User, str]:
+        user = self.authenticate(data)
+
+        return user, self._start_session(user)
+
+    def issue_access_token(self, data: LoginRequest) -> tuple[str, int]:
+        if tokens.signing_secret() is None:
+            raise NotConfiguredError("Este servidor no tiene configurada la emisión de tokens.")
+
+        user = self.authenticate(data)
+        token = tokens.create_access_token(user.id, user.password_hash)
+
+        return token, int(tokens.ACCESS_TOKEN_LIFETIME.total_seconds())
+
+    def user_for_access_token(self, token: str) -> User:
+        claims = tokens.read_access_token(token)
+
+        if claims is None:
+            raise AuthenticationError("Not authenticated")
+
+        user_id, fingerprint = claims
+        user = self.users.get(user_id)
+
+        # A token stops working as soon as the password it was issued under changes.
+        if user is None or fingerprint != tokens.password_fingerprint(user.password_hash):
+            raise AuthenticationError("Not authenticated")
+
+        return user
+
+    def authenticate(self, data: LoginRequest) -> User:
         email = normalize_email(data.email)
 
         if login_limiter.is_blocked(email, self.users.session):
@@ -81,7 +115,7 @@ class AuthService:
             self.users.save(user)
             logger.info("password_rehashed", extra={"user_id": user.id})
 
-        return user, self._start_session(user)
+        return user
 
     def request_password_reset(self, email: str, mailer: Mailer) -> None:
         email = normalize_email(email)

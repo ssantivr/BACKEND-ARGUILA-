@@ -11,6 +11,9 @@ from app.main import app
 from app.migrate import apply_migrations
 from app.services.login_limiter import login_limiter, reset_request_limiter
 from app.services.undo_history import undo_history
+from tests.helpers import seed_access_catalog
+
+CATALOG_TABLES = {"roles", "permissions", "role_permissions"}
 
 
 def create_test_engine() -> Engine:
@@ -23,6 +26,7 @@ def create_test_engine() -> Engine:
             poolclass=StaticPool,
         )
         Base.metadata.create_all(engine)
+        seed_access_catalog(engine)
         return engine
 
     if not (make_url(url).database or "").endswith("test"):
@@ -32,7 +36,9 @@ def create_test_engine() -> Engine:
         )
 
     engine = create_engine(url)
-    tables = ", ".join(table.name for table in Base.metadata.sorted_tables)
+    tables = ", ".join(
+        table.name for table in Base.metadata.sorted_tables if table.name not in CATALOG_TABLES
+    )
 
     apply_migrations(engine)
 
@@ -43,11 +49,18 @@ def create_test_engine() -> Engine:
 
 
 @pytest.fixture
-def client(tmp_path, monkeypatch):
+def engine():
+    engine = create_test_engine()
+
+    yield engine
+
+    engine.dispose()
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch, engine):
     monkeypatch.setenv("UPLOAD_DIR", str(tmp_path / "uploads"))
     monkeypatch.setenv("OLLAMA_URL", "http://127.0.0.1:9")
-
-    engine = create_test_engine()
 
     def override_get_session():
         with Session(engine) as session:
@@ -61,4 +74,3 @@ def client(tmp_path, monkeypatch):
     undo_history.clear()
     login_limiter.clear()
     reset_request_limiter.clear()
-    engine.dispose()

@@ -2,6 +2,8 @@ import os
 import time
 
 from fastapi import FastAPI, Request, status
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
@@ -22,13 +24,18 @@ from app.api import (
     templates,
     terrains,
     undo,
+    v1,
 )
+from app.api.v1.validation import translate
 from app.errors import (
     AuthenticationError,
     ConflictError,
     FileTooLargeError,
+    InvalidDataError,
     InvalidTokenError,
+    NotConfiguredError,
     NotFoundError,
+    PermissionDeniedError,
     TooManyAttemptsError,
     UnsupportedFileError,
 )
@@ -50,7 +57,7 @@ app.add_middleware(
     allow_origins=allowed_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 SECURITY_HEADERS = {
@@ -105,6 +112,7 @@ app.include_router(recommendations.router)
 app.include_router(undo.router)
 app.include_router(conversations.router)
 app.include_router(summary.router)
+app.include_router(v1.router)
 
 
 @app.exception_handler(AuthenticationError)
@@ -138,9 +146,39 @@ def handle_conflict(request: Request, error: ConflictError) -> JSONResponse:
 def handle_integrity_error(request: Request, error: IntegrityError) -> JSONResponse:
     logger.warning("integrity_conflict", extra={"path": request.url.path})
 
+    detail = (
+        "El cambio entra en conflicto con datos que ya existen."
+        if request.url.path.startswith(v1.API_PREFIX)
+        else "The change conflicts with existing data"
+    )
+
+    return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": detail})
+
+
+@app.exception_handler(PermissionDeniedError)
+def handle_permission_denied(request: Request, error: PermissionDeniedError) -> JSONResponse:
+    return JSONResponse(status_code=status.HTTP_403_FORBIDDEN, content={"detail": str(error)})
+
+
+@app.exception_handler(InvalidDataError)
+def handle_invalid_data(request: Request, error: InvalidDataError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"detail": str(error)})
+
+
+@app.exception_handler(NotConfiguredError)
+def handle_not_configured(request: Request, error: NotConfiguredError) -> JSONResponse:
     return JSONResponse(
-        status_code=status.HTTP_409_CONFLICT,
-        content={"detail": "The change conflicts with existing data"},
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content={"detail": str(error)}
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_validation_error(request: Request, error: RequestValidationError) -> JSONResponse:
+    if not request.url.path.startswith(v1.API_PREFIX):
+        return await request_validation_exception_handler(request, error)
+
+    return JSONResponse(
+        status_code=422, content={"detail": [translate(issue) for issue in error.errors()]}
     )
 
 
